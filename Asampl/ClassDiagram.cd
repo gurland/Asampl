@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="AstNode">
+    <Position X="1.5" Y="3.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAEAAAAAAAAAAAAAABACAAAAAAAAAAAAA=</HashCode>
+      <FileName>tree.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Tree">
+    <Position X="4" Y="3.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAACAAAQAAAAAAAAAAAAAACAAAAAAAAAAAAA=</HashCode>
+      <FileName>tree.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Value">
+    <Position X="6.5" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAwEAAAAAA=</HashCode>
+      <FileName>interpreter.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Program">
+    <Position X="6.5" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAACAEAAA=</HashCode>
+      <FileName>interpreter.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Parser">
+    <Position X="6.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AACgAAAAAAAgAAAAAAEAAAAAAAEAAAIAAAAAAAAAAAA=</HashCode>
+      <FileName>parser.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Lexem">
+    <Position X="3" Y="0.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAUAAAAAAAAAAAAAAAAAAAAAAAABIAEQAABAAAAAEEA=</HashCode>
+      <FileName>lexer.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Typedef Name="AstNodeType" Collapsed="true">
+    <Position X="2" Y="6.75" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>tree.h</FileName>
+    </TypeIdentifier>
+  </Typedef>
+  <Typedef Name="DataType" Collapsed="true">
+    <Position X="0.75" Y="2.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>interpreter.h</FileName>
+    </TypeIdentifier>
+    <AliasOfLine Type="__unnamed_enum_0128_1" FixedFromPoint="true">
+      <Path>
+        <Point X="1.5" Y="2.316" />
+        <Point X="1.5" Y="2.406" />
+        <Point X="1.625" Y="2.406" />
+        <Point X="1.625" Y="2.5" />
+      </Path>
+    </AliasOfLine>
+  </Typedef>
+  <Typedef Name="GrammarRule" Collapsed="true">
+    <Position X="3.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>parser.cpp</FileName>
+    </TypeIdentifier>
+  </Typedef>
+  <Typedef Name="LexemType" Collapsed="true">
+    <Position X="0.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>lexer.h</FileName>
+    </TypeIdentifier>
+  </Typedef>
+  <Enum Name="__unnamed_enum_0078_1">
+    <Position X="1.75" Y="7.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>ggAQgAAIBAEAAAQ6CQCCEAQCCAkSwDQEiAIAgAUZBIA=</HashCode>
+      <FileName>tree.h</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="__unnamed_enum_0128_1">
+    <Position X="0.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAFQAAAAAAgAAAAAAAAAQAAAAAAAAAAQA=</HashCode>
+      <FileName>interpreter.h</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="__unnamed_enum_006d_1" Collapsed="true">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>C0A9igEEQCgCCAAQdJCCBGBARumBBClNVEAqIgAYwBE=</HashCode>
+      <FileName>lexer.h</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
