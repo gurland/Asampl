@@ -38,10 +38,10 @@ int main(int argc, char *argv[])
 	int code = Lexer_splitTokens(&fileStream, &lexem_sequence);
 	//LexemPrint(&lexem_sequence);
 
-	/*if (code == -1) {
+	if (code == -1) {
 		std::cout << "Error while reading program file stream";
 		return 0;
-	}*/
+	}
 
 	Tree* tree = parser_buid_tree(&lexem_sequence);
 	if (!tree) {
