@@ -176,7 +176,7 @@ static bool eoi(Parser * parser) {
 
 
 static Tree * accept(Parser * self, LexemType type) {
-	if (eoi(self)) return false;
+	if (eoi(self)) return nullptr;
 	//Token * token = Iterator_value(self->tokens);
 	Lexem lexem = self->GetIteratorValue();
 
