@@ -1,28 +1,28 @@
 #include "pch.h"
 #include "lexer.h"
 
-#include<string.h>
-#include<ctype.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<stdbool.h>
-
 #include <iostream>
 #include <fstream>
-
 #include <algorithm>
-
+#include <cctype>
 #include <string>
 #include <map>
 
 namespace Lexer {
 
-	struct comp {
-		bool operator() (const std::string &lhs, const std::string &rhs) const {
-			return _stricmp(lhs.c_str(), rhs.c_str()) < 0;
-		}
-	};
-
+    struct comp {
+        bool operator() (const std::string& lhs, const std::string& rhs) const {
+            if (lhs.size() != rhs.size()) {
+                return false;
+            }
+            for (int i = 0; i < lhs.size(); i++) {
+                if (std::tolower(lhs[i]) != std::tolower(rhs[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
 
 	std::map <std::string, TokenType, comp> program_key_words = {
 

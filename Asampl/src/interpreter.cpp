@@ -1,10 +1,12 @@
 #include "pch.h"
 #include "interpreter.h"
+
+#include <iomanip>
 #include <cassert>
-#include <math.h>
-#include <opencv2/opencv.hpp>
-#include <time.h> 
+#include <cmath>
 #include <ctime> 
+
+#include <opencv2/opencv.hpp>
 
 
 static Value * execute_expression(Program * program, Tree * node);
