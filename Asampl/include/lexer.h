@@ -1,197 +1,167 @@
 #pragma once
+
 #include <string>
 #include <vector>
 #include <fstream>
+#include <iostream>
 
-#define IS_NAME_START(c)  (isalpha( (c) ) || (c) == '_')
+#define IS_NAME_START(c) (isalpha( (c) ) || (c) == '_')
+#define IS_NAME(c) ( IS_NAME_START( c ) || isdigit(c) )
+#define IS_STRING_LITERAL_START(c) ((c) == '\'' || (c) == '\"')
 
-#define IS_NAME( c )	  ( IS_NAME_START( c ) || isdigit(c) )
+namespace Lexer {
+	enum class TokenType {
+		//Base_Symbols
+		INTEGER,
+		REAL,
 
-#define IS_STRING_LITERAL_START( c )	  ( (c) == '\'' || (c) == '\"' )
-	
+		NUMBER,
 
-typedef enum {
-	//Base_Symbols
-	LexemType_INTEGER,
-	LexemType_REAL,
+		STRING_LITERAL,
+		NAME,
 
-	LexemType_NUMBER,
+		//True/False
+		LOGIC, //BOOLEAN
 
-	LexemType_STRING_LITERAL,
-	LexemType_NAME,
+		//Math_Operators
+		PLUS,
+		MINUS,
+		MULT,
+		DIV,
 
-	//True/False
-	LexemType_LOGIC, //BOOLEAN
+		MOD, //May be
 
-	//Math_Operators
-	LexemType_PLUS,
-	LexemType_MINUS,
-	LexemType_MULT,
-	LexemType_DIV,
+		CARET,
 
-	LexemType_MOD, //May be
+		//Logical_Operators
+		AND,
+		OR,
+		NOT,
+		XOR,
 
-	LexemType_CARET,
+		EQUAL,
+		NOTEQUAL,
 
-	//Logical_Operators
-	LexemType_AND,
-	LexemType_OR,
-	LexemType_NOT,
-	LexemType_XOR,
+		MORE,
+		LESS,
 
-	LexemType_EQUAL,
-	LexemType_NOTEQUAL,
+		LESS_OR_EQUAL,
+		MORE_OR_EQUAL,
 
-	LexemType_MORE,
-	LexemType_LESS,
+		//Assign
+		ASSIGN, //("=" or "IS")
 
-	LexemType_LESS_OR_EQUAL,
-	LexemType_MORE_OR_EQUAL,
+		//Symbols
+		POINT,
+		COMMA,
+		SEMICOLON,
+		COLON,
+		QUESTION_MARK,
+		EXCLAMATION_MARK,
 
-	//Assign
-	LexemType_ASSIGN, //("=" or "IS")
+		LEFT_BRACKET,//"("
+		RIGHT_BRACKET,//")"
+		LEFT_BRACE, //"{"
+		RIGHT_BRACE,//"}"
+		LEFT_SQUARE_BRACKET,//"["
+		RIGHT_SQUARE_BRACKET,//"]"
 
-	//Symbols
-	LexemType_POINT,
-	LexemType_COMMA,
-	LexemType_SEMICOLON,
-	LexemType_COLON,
-	LexemTupe_QUESTION_MARK,
-	LexemType_EXCLAMATION_MARK,
+		APOSTROPHE,
+		QUOTES, // "
+		SLASH, // "/"
+		BACKSLASH, // "\"
+		NUMBER_SIGN, // "#"
+		SOBAKA, //"@"
 
-	LexemType_LEFT_BRACKET,//"("
-	LexemType_RIGHT_BRACKET,//")"
-	LexemType_LEFT_BRACE, //"{"
-	LexemType_RIGHT_BRACE,//"}"
-	LexemType_LEFT_SQUARE_BRACKET,//"["
-	LexemType_RIGHT_SQUARE_BRACKET,//"]"
+		AMPERSAND,
+		VERTICAL_BAR,
 
-	LexemType_APOSTROPHE,
-	LexemType_QUOTES, // "
-	LexemType_SLASH, // "/"
-	LexemType_BACKSLASH, // "\"
-	LexemType_NUMBER_SIGN, // "#"
-	LexemType_SOBAKA, //"@"
+		//Program key words
+		PROGRAM,
+		LIBRARIES,
+		HANDLERS,
+		RENDERERS,
+		SOURCES,
+		SETS,
+		ELEMENTS,
+		TUPLES,
+		AGGREGATES,
+		ACTIONS,
 
-	LexemType_AMPERSAND,
-	LexemType_VERTICAL_BAR,
+		//Special key words for
 
-	//Program key words
-	LexemType_PROGRAM,
-	LexemType_LIBRARIES, 
-	LexemType_HANDLERS,
-	LexemType_RENDERERS,
-	LexemType_SOURCES,
-	LexemType_SETS,
-	LexemType_ELEMENTS,
-	LexemType_TUPLES,
-	LexemType_AGGREGATES,
-	LexemType_ACTIONS,
+		//Timeline operator
+		TIMELINE,
+		AS,
+		UNTIL,
+		//Sequence handler operator
+		SEQUENCE,
 
-	//Special key words for
+		//IF/Case/while
+		IF,
+		THEN,
+		ELSE,
+		SWITCH,
+		DEFAULT,
+		CASE,
+		OF,
+		WHILE,
 
-	//Timeline operator
-	LexemType_TIMELINE,
-	LexemType_AS,
-	LexemType_UNTIL,
-	//Sequence handler operator
-	LexemType_SEQUENCE,
+		//SUBSTITUTE operator
+		SUBSTITUTE,
+		FOR,
+		WHEN,
 
-	//IF/Case/while
-	LexemType_IF,
-	LexemType_THEN,
-	LexemType_ELSE,
-	LexemType_SWITCH,
-	LexemType_DEFAULT,
-	LexemType_CASE,
-	LexemType_OF,
-	LexemType_WHILE,
+		//Download/Render operator
+		DOWNLOAD,
+		FROM,
+		WITH,
+		UPLOAD,
+		TO,
 
-	//SUBSTITUTE operator
-	LexemType_SUBSTITUTE,
-	LexemType_FOR,
-	LexemType_WHEN,
+		RENDER,
+		PRINT,
+		//TokenType_WITH,
 
-	//Download/Render operator
-	LexemType_DOWNLOAD,
-	LexemType_FROM,
-	LexemType_WITH,
-	LexemType_UPLOAD,
-	LexemType_TO,
+		COMMENT,
 
-	LexemType_RENDER,
-	LexemType_PRINT,
-	//TokenType_WITH,
-
-	LexemType_COMMENT,
-
-	LexemType_NOTHING,
-} LexemType;
-
-
-class Lexem
-{
-	std::string	buffer;
-	LexemType type;
-	int line;
-
-public:
-
-	// конструктор по умолчанию
-	Lexem() {
-		type = LexemType_NOTHING;
-	}
-	// конструктор с заданием параметров
-	Lexem(std::string b, LexemType t, int positionInFile) : buffer(b), type(t), line(positionInFile) {
-	}
+		NOTHING,
+	};
 
 
-	std::string GetBuffer() const {
-		return buffer;
-	}
+	class Token
+	{
+		std::string	buffer_;
+		TokenType type_;
+		int line_;
 
-	LexemType GetType() const {
-		return type;
-	}
+	public:
+		Token() : type_(TokenType::NOTHING)
+		{}
 
-	int GetLine() {
-		return line;
-	}
+		Token(std::string buffer, TokenType type, int position_in_file) :
+			buffer_(buffer), type_(type), line_(position_in_file)
+		{}
 
-	void SetBuffer(std::string b) {
-		buffer = b;
-	}
 
-	void SetType(LexemType t) {
-		type = t;
-	}
+		std::string get_buffer() const { return buffer_; }
+		TokenType get_type() const { return type_; }
+		int get_line() { return line_; }
 
-	void SetLine(int l) {
-		line = l;
-	}
+		void set_buffer(std::string buffer) { buffer_ = buffer; }
+		void set_type(TokenType type) { type_ = type; }
+		void set_line(int line) { line_ = line; }
 
-};
+	};
 
 
 
-//Main function
-int Lexer_splitTokens(std::fstream *fs, std::vector<Lexem>* lexem_sequence);
+	//Main function
+	int split_tokens(std::fstream &fs, std::vector<Token> &token_sequence);
 
-//just skip spaces
-inline static int IgnoreTabNewlinesAndSpaces(std::fstream *fs);
+	//Print all
+	void token_print(std::vector<Token> &token_sequence);
 
+	std::string to_string(TokenType type);
 
-//Выделить оператор
-inline static int LexemOperator(std::fstream *fs, Lexem *lexem_to_add);
-
-//Выделить имя
-inline static int LexemName(std::fstream *fs, Lexem *lexem_to_add);
-
-//Выделить цифру
-inline static int LexemDigit(std::fstream *fs, Lexem *lexem_to_add);
-
-//Print all
- void LexemPrint(std::vector<Lexem>* lexem_sequence);
-
- std::string LexemType_toString(LexemType type);
-
+}

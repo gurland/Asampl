@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <algorithm>
 
@@ -84,7 +84,7 @@ public:
 	}
 };
 
-class Tree{
+class Tree {
 public:
 	AstNode * value;
 	std::vector<Tree*> children;
@@ -110,6 +110,37 @@ public:
 		);
 	}*/
 
+	void pretty_print() {
+		printf("\n\n");
+		std::string indent = "";
+		PrintPretty(this, indent, 1, 1);
+	}
+private:
+	void PrintPretty(Tree* node, std::string indent, int root, int last) {
+		printf("%s", indent.c_str());
+		std::string newIndent = "";
+		if (last) {
+			if (!root) {
+				printf("`-");
+				newIndent = indent + "**";
+			}
+			else {
+				newIndent = indent;
+				//newIndent = str_append(indent, "");
+			}
+		}
+		else {
+			printf("|-");
+			newIndent = indent + "|*";
+		}
+		AstNode* astNode = node->value;
+		printf("%s\n", astNode->value.c_str());
+		std::vector<Tree*> children = (node->children);
+		size_t count = children.size();
+		for (int i = 0; i < count; ++i) {
+			PrintPretty(children.at(i), newIndent, 0, i == count - 1);
+		}
+	}
 	
 	
 
