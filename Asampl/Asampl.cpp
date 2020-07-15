@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 		std::cerr << "Error, no input file specified";
 		return 0;
 	}
-	const char * file_name = argv[1];
+	const char *file_name = argv[1];
 
 	std::fstream file_stream(file_name);
 	//std::cout << "File: "<< fileName << std::endl;
@@ -46,13 +46,15 @@ int main(int argc, char *argv[])
 
 	token_print(lexem_sequence);
 	
-
-	Tree* tree = parser_buid_tree(&lexem_sequence);
+	Parser p(&lexem_sequence);
+	Tree* tree = p.buid_tree();
+	//Tree* tree = parser_buid_tree(&lexem_sequence);
 	if (!tree) {
 		std::cerr << "Error while parsing sequence of lexemes";
 		return 0;
 	}
-	tree->pretty_print();
+
+	tree->print(std::cout);
 
 	//std::ofstream myfile;
 	//myfile.open("D:/tree.txt");

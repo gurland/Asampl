@@ -86,64 +86,39 @@ public:
 
 class Tree {
 public:
-	AstNode * value;
-	std::vector<Tree*> children;
 
 	Tree()
-	{
+	{}
 
-	}
+	Tree(AstNode * value) : value(value)
+	{}
 
-	Tree(AstNode * value) : value(value){
-
-	}
-
-	/*void print() {
-
-		std::cout << value->name << std::endl;
-		
-		std::for_each(children.begin(),
-			children.end(),
-			[](void * child) {
-				((Tree *)child)->print();
-			}
-		);
-	}*/
-
-	void pretty_print() {
-		printf("\n\n");
-		std::string indent = "";
-		PrintPretty(this, indent, 1, 1);
-	}
-private:
-	void PrintPretty(Tree* node, std::string indent, int root, int last) {
-		printf("%s", indent.c_str());
-		std::string newIndent = "";
+	void print(std::ostream &file, const std::string &indent = "", int root = 1, int last = 1) {
+		file << indent;
+		std::string new_indent = "";
 		if (last) {
 			if (!root) {
-				printf("`-");
-				newIndent = indent + "**";
+				file << "`-";
+				new_indent = indent + "**";
+			} else {
+				new_indent = indent;
 			}
-			else {
-				newIndent = indent;
-				//newIndent = str_append(indent, "");
-			}
+		} else {
+			file << "|-";
+			new_indent = indent + "|*";
 		}
-		else {
-			printf("|-");
-			newIndent = indent + "|*";
-		}
-		AstNode* astNode = node->value;
-		printf("%s\n", astNode->value.c_str());
-		std::vector<Tree*> children = (node->children);
+		AstNode* astNode = this->value;
+		file << astNode->value + "\n";
+		std::vector<Tree*> children = (this->children);
 		size_t count = children.size();
 		for (int i = 0; i < count; ++i) {
-			PrintPretty(children.at(i), newIndent, 0, i == count - 1);
+			children.at(i)->print(file, new_indent, 0, i == count - 1);
 		}
 	}
-	
-	
 
+public:
+	AstNode* value;
+	std::vector<Tree*> children;
 };
 
 /*TRACE_CALL();
