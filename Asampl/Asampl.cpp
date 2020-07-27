@@ -11,16 +11,12 @@
 
 #include "lexer.h"
 #include "parser.h"
-#include "print_ast.h"
 #include "interpreter.h"
 
 
 
 int main(int argc, char *argv[])
 {
-	
-
-	//std::fstream fileStream("D:/test.txt");
 	if (argc < 2) {
 		std::cerr << "Error, no input file specified";
 		return 0;
@@ -28,7 +24,6 @@ int main(int argc, char *argv[])
 	const char *file_name = argv[1];
 
 	std::fstream file_stream(file_name);
-	//std::cout << "File: "<< fileName << std::endl;
 
 	if (!file_stream) {
 		std::cerr << "Error while trying to open input file";
@@ -37,7 +32,6 @@ int main(int argc, char *argv[])
 
 	std::vector<Lexer::Token> lexem_sequence;
 	int code = Lexer::split_tokens(file_stream, lexem_sequence);
-	//LexemPrint(&lexem_sequence);
 
 	if (code == -1) {
 		std::cerr << "Error while reading program file stream";
@@ -47,8 +41,7 @@ int main(int argc, char *argv[])
 	token_print(lexem_sequence);
 	
 	Parser p(&lexem_sequence);
-	Tree* tree = p.buid_tree();
-	//Tree* tree = parser_buid_tree(&lexem_sequence);
+	Tree *tree = p.buid_tree();
 	if (!tree) {
 		std::cerr << "Error while parsing sequence of lexemes";
 		return 0;
@@ -56,18 +49,10 @@ int main(int argc, char *argv[])
 
 	tree->print(std::cout);
 
-	//std::ofstream myfile;
-	//myfile.open("D:/tree.txt");
-	//AstTree_prettyPrint(tree, myfile);
-	//myfile.close();
+	//execute(tree);
 
-	execute(tree);
-
-		//tree->print();
-		//std::cout << tree->children[0]->children[0]->value->name << std::endl;
-	
+	Tree::free(tree);
 	return 0;
-
 }
 
 // Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
