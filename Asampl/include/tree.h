@@ -1,87 +1,90 @@
-﻿#pragma once
+#pragma once
 #include <vector>
 #include <algorithm>
 
 #include <iostream>
 #include <string>
 
-typedef enum {
-	AstNodeType_UNKNOWN,
+enum class AstNodeType {
+	UNKNOWN,
 	//
-	AstNodeType_ASSIGN,
-	AstNodeType_ADD,
-	AstNodeType_SUB,
-	AstNodeType_MUL,
-	AstNodeType_DIV,
-	AstNodeType_MOD,
-	AstNodeType_EQUAL,
-	AstNodeType_NOTEQUAL,
-	AstNodeType_NOT,
-	AstNodeType_MORE,
-	AstNodeType_LESS,
-	AstNodeType_MORE_OR_EQUAL,
-	AstNodeType_LESS_OR_EQUAL,
-	AstNodeType_AND,
-	AstNodeType_OR,
+	ASSIGN,
+	ADD,
+	SUB,
+	MUL,
+	DIV,
+	MOD,
+	EQUAL,
+	NOTEQUAL,
+	NOT,
+	MORE,
+	LESS,
+	MORE_OR_EQUAL,
+	LESS_OR_EQUAL,
+	AND,
+	OR,
 	//
-	AstNodeType_NUMBER,
-	AstNodeType_STRING,
-	AstNodeType_ID,
-	AstNodeType_BOOL,
+	NUMBER,
+	STRING,
+	ID,
+	BOOL,
 	//
-	AstNodeType_ARGLIST,
+	ARGLIST,
 	//
-	AstNodeType_TIMELINE_EXPR,
-	AstNodeType_TIMELINE_AS,
-	AstNodeType_TIMELINE_UNTIL,
+	TIMELINE_EXPR,
+	TIMELINE_AS,
+	TIMELINE_UNTIL,
 	//
-	AstNodeType_BLOCK,
-	AstNodeType_IF,
-	AstNodeType_WHILE,
+	BLOCK,
+	IF,
+	WHILE,
 
-	AstNodeType_SWITCH,
-	AstNodeType_CASE,
-	AstNodeType_DEFAULT,
+	SWITCH,
+	CASE,
+	DEFAULT,
 
-	AstNodeType_TIMELINE,
-	AstNodeType_SUBSTITUTION,
-	AstNodeType_SEQUENCE,
-	AstNodeType_DOWNLOAD,
-	AstNodeType_UPLOAD,
-	AstNodeType_RENDER,
+	TIMELINE,
+	SUBSTITUTION,
+	SEQUENCE,
+	DOWNLOAD,
+	UPLOAD,
+	RENDER,
 
-	AstNodeType_PRINT,
+	PRINT,
 	//
-	AstNodeType_LIB_IMPORT,
-	AstNodeType_ITEM_IMPORT,
-	AstNodeType_ELEMENT_IMPORT,
+	LIB_IMPORT,
+	ITEM_IMPORT,
+	ELEMENT_IMPORT,
 	//
-	AstNodeType_LIBRARIES,
-	AstNodeType_HANDLERS,
-	AstNodeType_RENDERERS,
-	AstNodeType_SOURCES,
-	AstNodeType_SETS,
-	AstNodeType_ELEMENTS,
-	AstNodeType_TUPLES,
-	AstNodeType_AGGREGATES,
-	AstNodeType_ACTIONS,
+	LIBRARIES,
+	HANDLERS,
+	RENDERERS,
+	SOURCES,
+	SETS,
+	ELEMENTS,
+	TUPLES,
+	AGGREGATES,
+	ACTIONS,
 	//
-	AstNodeType_PROGRAM,
-} AstNodeType;
+	PROGRAM,
+};
 
 
 class AstNode{
+
 public:
-	AstNodeType type;
-	std::string	value;
+	AstNode() :
+		type_(AstNodeType::UNKNOWN),
+		value_("")
+	{}
 
-	AstNode() {
-
-	}
-
-	AstNode(AstNodeType type, std::string value) : type(type), value(value) {
-
-	}
+	AstNode(AstNodeType type, std::string value) :
+		type_(type),
+		value_(value)
+	{}
+public:
+	AstNodeType type_;
+	std::string	value_;
 };
 
 class Tree {
@@ -90,10 +93,12 @@ public:
 	Tree()
 	{}
 
-	Tree(AstNode * value) : value(value)
+	Tree(AstNode *value) :
+		node_(value)
 	{}
 
-	void print(std::ostream &file, const std::string &indent = "", int root = 1, int last = 1) {
+	void print(std::ostream &file, const std::string &indent = "", bool root = true, int last = 1) {
+		if (root) file << "\n";
 		file << indent;
 		std::string new_indent = "";
 		if (last) {
@@ -107,86 +112,22 @@ public:
 			file << "|-";
 			new_indent = indent + "|*";
 		}
-		AstNode* astNode = this->value;
-		file << astNode->value + "\n";
-		std::vector<Tree*> children = (this->children);
-		size_t count = children.size();
+
+		file << this->node_->value_ + "\n";
+		size_t count = this->children_.size();
 		for (int i = 0; i < count; ++i) {
-			children.at(i)->print(file, new_indent, 0, i == count - 1);
+			this->children_.at(i)->print(file, new_indent, false, i == count - 1);
 		}
+	}
+
+	static void free(Tree *tree) {
+		for (auto child : tree->children_) {
+			Tree::free(child);
+		}
+		delete tree->node_;
 	}
 
 public:
-	AstNode* value;
-	std::vector<Tree*> children;
+	AstNode *node_;
+	std::vector<Tree *> children_;
 };
-
-/*TRACE_CALL();
-
-	if (!accept(parser, LexemType_IF)
-		|| !expect(parser, LexemType_LEFT_BRACKET)) return NULL;
-	Tree * exprNode = expr(parser);
-
-	if (!exprNode) {
-		return NULL;
-	}
-
-	if (!expect(parser, LexemType_RIGHT_BRACKET)) {   
-		return NULL;
-	}
-
-	Tree * actionNode = action(parser);
-
-	if (actionNode == NULL) {
-		return NULL;
-	}
-	Tree * ifNode = new Tree(new AstNode(AstNodeType_IF, "if"));
-
-	ifNode->children.push_back(exprNode);
-	ifNode->children.push_back(actionNode);
-
-	if (accept(parser, LexemType_ELSE)) {
-
-		Tree * elseNode = action(parser);
-		if (elseNode == NULL || !parser->error.empty()) {
-			return NULL;
-		}
-
-		ifNode->children.push_back(elseNode);
-	}
-	return ifNode;
-}*/
-
-/*TRACE_CALL();
-    if (!bool_accept(parser, TokenType_LET)) return NULL;
-    Tree * idNode = ID_expect(parser);
-    if (!idNode) return NULL;
-
-    if (!bool_expect(parser, TokenType_ASSIGN)) {
-        Parser_releaseTheTree(idNode);
-        // parser->error = strdup("ERROR");
-        // @todo error
-        return NULL;
-    }
-
-    // Tree * exprNode = expr(parser);
-    Tree * dataNode = data(parser);
-    if (dataNode == NULL) {
-        Parser_releaseTheTree(idNode);
-        Parser_releaseTheTree(dataNode);
-        
-        // @todo error
-        return NULL;
-    } 
-    if (!bool_expect(parser, TokenType_SEMICOLON)) {
-        Parser_releaseTheTree(idNode);
-        Parser_releaseTheTree(dataNode);
-        // @todo error
-        return NULL;
-    }
-
-    Tree * varDecl = Tree_new(AstNode_new(AstNodeType_DECLAREVAR, "declareVar"));
-
-    List_add(varDecl->children, idNode);
-    List_add(varDecl->children, dataNode);
-    return varDecl;*/

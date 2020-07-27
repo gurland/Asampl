@@ -414,7 +414,7 @@ namespace Lexer {
 		return 0;
 	}
 
-	// выделить лексему 'число'
+	// РІС‹РґРµР»РёС‚СЊ Р»РµРєСЃРµРјСѓ 'С‡РёСЃР»Рѕ'
 	inline static int token_digit(std::fstream &fs, Token *token_to_add)
 	{
 		std::string buffer;
@@ -542,12 +542,18 @@ namespace Lexer {
 
 	void token_print(std::vector<Token> &token_sequence)
 	{
-
-		std::for_each(token_sequence.begin(), token_sequence.end(),
-			[&](Token token) {
-				std::cout << " Lexem: " << token.get_buffer() << "	Value: " << to_string(token.get_type()) << std::endl;
+		for (const auto& token : token_sequence) {
+			std::string str = "\t\tValue: ";
+			if ((token.get_buffer().length() <= 8)) {
+				str = "\t\t\tValue: ";
 			}
-		);
+			else if ((token.get_buffer().length() > 16)) {
+				str = "\tValue: ";
+			}
+			std::cout <<
+				"Lexem: " << token.get_buffer() <<
+				str << to_string(token.get_type()) << "\n";
+		}
 	}
 
 	std::string to_string(TokenType type) {

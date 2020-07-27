@@ -10,13 +10,100 @@
 
 using namespace Lexer;
 
-static AstNodeType TokenType_toAstNodeType(TokenType type);
+static Tree *accept(Parser *parser, TokenType token);
+static Tree *expect(Parser *parser, TokenType token);
+
+static AstNodeType tokenType_to_astType(TokenType type);
+
+static Tree *program(Parser *parser);
+
+static Tree *libraries_section(Parser *parser);
+static Tree *library_import(Parser *parser);
+
+static Tree *handlers_section(Parser *parser);
+static Tree *renderers_section(Parser *parser);
+
+
+static Tree *sources_section(Parser *parser);
+//static bool source_declaration(Parser *parser);
+
+static Tree *sets_section(Parser *parser);
+
+static Tree *item_import(Parser *parser);
+
+
+static Tree *elements_section(Parser *parser);
+static Tree *element_declaration(Parser *parser);
+
+static Tree *tuples_section(Parser *parser);
+//static bool tuples_declaration(Parser *parser);
+
+static Tree *aggregates_section(Parser *parser);
+//static bool aggregates_declaration(Parser *parser);
+
+
+static Tree *actions_section(Parser *parser);
+static Tree *action(Parser *parser);
+
+static Tree *block_actions(Parser *parser);
+
+static Tree *sequence_action(Parser *parser);
+static Tree *download_action(Parser *parser);
+static Tree *upload_action(Parser *parser);
+static Tree *render_action(Parser *parser);
+static Tree *if_action(Parser *parser);
+static Tree *while_action(Parser *parser);
+static Tree *switch_action(Parser *parser);
+static Tree *switch_operator(Parser *parser);
+
+static Tree *print_action(Parser *parser);
+
+static Tree *substitution_action(Parser *parser);
+
+static Tree *timeline_action(Parser *parser);
+static Tree *timeline_overload(Parser *parser);
+
+static Tree *timeline_expr(Parser *parser);
+static Tree *timeline_as(Parser *parser);
+static Tree *timeline_until(Parser *parser);
+//static bool timeline_while(Parser *parser);
+
+
+static Tree *expr(Parser *parser);
+static Tree *expr_st(Parser *parser);
+//static bool block_st(Parser *parser);
+
+
+static Tree *assign(Parser *parser);
+static Tree *assign_ap(Parser *parser);
+static Tree *log_or(Parser *parser);
+static Tree *log_or_ap(Parser *parser);
+static Tree *log_and(Parser *parser);
+static Tree *log_and_ap(Parser *parser);
+static Tree *eq(Parser *parser);
+static Tree *eq_ap(Parser *parser);
+static Tree *rel(Parser *parser);
+static Tree *rel_ap(Parser *parser);
+static Tree *add(Parser *parser);
+static Tree *add_ap(Parser *parser);
+static Tree *mult(Parser *parser);
+static Tree *mult_ap(Parser *parser);
+static Tree *unary(Parser *parser);
+static Tree *primary(Parser *parser);
+static Tree *var_or_call(Parser *parser);
+static Tree *parentheses(Parser *parser);
+static Tree *fn_call(Parser *parser);
+static Tree *arg_list(Parser *parser);
+static Tree *data(Parser *parser);
+static Tree *arr_ini(Parser *parser);
+
+using grammar_rule_t = std::function<Tree *(Parser*)>;
+
+//typedef Tree *(*GrammarRule)(Parser *parser);
+
 
 Tree *Parser::buid_tree() {
-
-	Tree *tree = program();
-
-	//std::cout << "HELLO" << std::endl;
+	Tree *tree = program(this);
 
 	if (!get_error().empty()) {
 		std::cout << get_error() << std::endl;
@@ -24,123 +111,81 @@ Tree *Parser::buid_tree() {
 
 	}
 	return tree;
-
 }
 
-#define TRACE_END() \
-  parser->reduce_level();
-
-#define TRACE_CALL() \
-    this->increase_level(); \
-	
-
-
-static void traceLevel(int level) {
-	for (int i = 0; i < level; i++) {
-		putchar('.');
-		putchar('.');
-	}
-}
-
-bool Parser::eoi() {
-	return this->get_iterator() == this->get_token_sequence()->end() ? true : false;
+static bool eoi(Parser *parser) {
+	return parser->get_iterator() == parser->get_token_sequence()->end() ? true : false;
 }
 
 
-Tree *Parser::accept(TokenType type) {
-	if (eoi()) return nullptr;
-	//Token *token = Iterator_value(this->tokens);
-	Token lexem = this->get_iterator_value();
+static Tree *accept(Parser *parser, TokenType type) {
+	if (eoi(parser)) return nullptr;
+	//Token *token = Iterator_value(parser->tokens);
+	Token lexem = parser->get_iterator_value();
 
 	if (lexem.get_type() == type) {
 
-		AstNodeType astType = TokenType_toAstNodeType(type);
+		AstNodeType astType = tokenType_to_astType(type);
 
 		AstNode *node = new AstNode(astType, lexem.get_buffer());
 		Tree *tree = new Tree(node);
-		this->increase_iterator();
+		parser->increase_iterator();
 		return tree;
 	}
 	return nullptr;
 }
 
-Tree *Parser::expect(TokenType type) {
-	Tree *tree = accept(type);
+static Tree *expect(Parser *parser, TokenType type) {
+	Tree *tree = accept(parser, type);
 
 	if (tree != nullptr) {
 		return tree;
 	}
-	std::string currentTokenType = eoi() ? "EOI" : to_string(get_iterator_value().get_type());
-	int error_line = get_iterator_value().get_line();
-	std::string message = "ERROR: expected " + to_string(type) + " got " + currentTokenType +". Line: " + std::to_string(error_line) + ".\n";
+	std::string currentTokenType = eoi(parser) ? "EOI" : to_string(parser->get_iterator_value().get_type());
+	int error_line = parser->get_iterator_value().get_line();
+	std::string message = "ERROR: expected " + to_string(type) + " got " + currentTokenType + ". Line: " + std::to_string(error_line) + ".\n";
 
-	//std::cout << message << std::endl;
-	set_error(message);
+	parser->set_error(message);
 
 	return nullptr;
 }
 
 
-bool Parser::ebnf_sequence(Tree *node_to_fill, grammar_rule_t rule) {
-	/*while (rule(parser) && parser->error.empty())
-		;
-	return parser->error.empty() ? true : false;*/
-
+static bool ebnf_sequence(Parser *parser, Tree *node_to_fill, grammar_rule_t rule) {
 	Tree *node = nullptr;
 
-	while ((node = rule()) && get_error().empty()) {
+	while (node = rule(parser), node && parser->get_error().empty()) {
 		if (node == nullptr) return false;
 		//nodes->ch.push_back(node);
-		node_to_fill->children.push_back(node);
+		node_to_fill->children_.push_back(node);
 	}
-	return get_error().empty() ? true : false;
+	return parser->get_error().empty() ? true : false;
 }
 
-Tree *Parser::ebnf_one_of(grammar_rule_t rules[], size_t length) {
-
-	/*bool match = false;
-
-	for (int i = 0; i < length && !match; i++) {
-		GrammarRule rule = rules[i];
-		match = rule(parser);
-		if (!parser->error.empty()) return false;
-	}
-	return match;*/
-
+static Tree *ebnf_one_of(Parser *parser, grammar_rule_t rules[], size_t length) {
 	Tree *node = nullptr;
 	for (int i = 0; i < length && !node; i++) {
 		grammar_rule_t rule = rules[i];
-		node = rule();
-		if (!get_error().empty()) return nullptr;
+		node = rule(parser);
+		if (!parser->get_error().empty()) return nullptr;
 	}
 	return node;
 }
 
-Tree *Parser::ebnf_one_of_lexem(TokenType types[], size_t length) {
-	/*bool match = true;
-
-	for (int i = 0; i < typesLen && !match; i++) {
-		match = accept(parser, types[i]);
-	}
-	return match;*/
+static Tree *ebnf_one_of_lexem(Parser *parser, TokenType types[], size_t length) {
 	Tree *node = nullptr;
 	for (int i = 0; i < length && !node; i++) {
-		node = accept(types[i]);
+		node = accept(parser, types[i]);
 	}
 	return node;
 }
 
-Tree *Parser::ebnf_ap_main_rule(grammar_rule_t next, grammar_rule_t ap) {
-	/*if (next(parser)) {
-		ap(parser);
-		return parser->error.empty() ? true : false;
-	}
-	return false;*/
-	Tree *nextNode = next();
+static Tree *ebnf_ap_main_rule(Parser *parser, grammar_rule_t next, grammar_rule_t ap) {
+	Tree *nextNode = next(parser);
 	if (nextNode) {
-		Tree *apNode = ap();
+		Tree *apNode = ap(parser);
 		if (apNode) {
-			apNode->children.insert(apNode->children.begin(), nextNode);
+			apNode->children_.insert(apNode->children_.begin(), nextNode);
 			return apNode;
 		}
 		return nextNode;
@@ -148,413 +193,313 @@ Tree *Parser::ebnf_ap_main_rule(grammar_rule_t next, grammar_rule_t ap) {
 	return nullptr;
 }
 
-Tree *Parser::ebnf_ap_recursive_rule(TokenType types[], size_t typesLen, grammar_rule_t next, grammar_rule_t ap) {
-	/*bool accepted = ebnf_one_of_tokens(parser, types, typesLen);
-	if (accepted) {
-		return next(parser) && ap(parser);
-	}
-	return false;*/
-
-	Tree *opNode = ebnf_one_of_lexem(types, typesLen);
+static Tree *ebnf_ap_recursive_rule(Parser *parser, TokenType types[], size_t typesLen, grammar_rule_t next, grammar_rule_t ap) {
+	Tree *opNode = ebnf_one_of_lexem(parser, types, typesLen);
 	if (opNode == nullptr) return nullptr;
 
 	Tree *node = nullptr;
-	Tree *nextNode = next();
-	Tree *apNode = ap();
+	Tree *nextNode = next(parser);
+	Tree *apNode = ap(parser);
 	if (apNode) {
-		apNode->children.insert(apNode->children.begin(), nextNode);
+		apNode->children_.insert(apNode->children_.begin(), nextNode);
 		node = apNode;
 	}
 	else {
 		node = nextNode;
 	}
 
-	opNode->children.push_back(node);
+	opNode->children_.push_back(node);
 	return opNode;
 }
 
-/*void parser_dec_level(Parser **parser) {
+void parser_dec_level(Parser **parser) {
 	//(*parser)->level--;
 	(*parser)->reduce_level();
-}*/
-
-
-Tree *Parser::id() {
-	TRACE_CALL();
-	return accept(TokenType::NAME);
 }
 
-Tree *Parser::string() {
-	TRACE_CALL();
-	return accept(TokenType::STRING_LITERAL);
+
+static Tree *ID(Parser *parser) {
+	parser->increase_level();
+	return accept(parser, TokenType::NAME);
 }
 
-Tree *Parser::boolean() {
-	TRACE_CALL();
-	return accept(TokenType::LOGIC);
+static Tree *String(Parser *parser) {
+	parser->increase_level();
+	return accept(parser, TokenType::STRING_LITERAL);
 }
 
-Tree *Parser::number() {
-	TRACE_CALL();
-	return accept(TokenType::NUMBER);
+static Tree *BOOL(Parser *parser) {
+	parser->increase_level();
+	return accept(parser, TokenType::LOGIC);
 }
 
-Tree *Parser::program() {
-	/*TRACE_CALL();
-	return accept(parser, TokenType::PROGRAM)
-
-		&& expect(parser, TokenType::NAME)
-
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& libraries_section(parser)
-		&& handlers_section(parser)
-		&& renderers_section(parser)
-		&& sources_section(parser)
-
-		&& sets_section(parser)
-		&& elements_section(parser)
-		&& tuples_section(parser)
-		&& aggregates_section(parser)
-
-		&& actions_section(parser)
-
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
-	TRACE_CALL();
-	if (!accept(TokenType::PROGRAM)
-		|| !expect(TokenType::NAME) || !expect(TokenType::LEFT_BRACE)) return nullptr;
-
-	
-	Tree *librariesNode = libraries_section();
-	if (!librariesNode) {
-		return nullptr;
-	}
-	
-
-	Tree *handlersNode = handlers_section();
-	if (!handlersNode) {
-		return nullptr;
-	}
-	Tree *renderersNode = renderers_section();
-	if (!renderersNode) {
-		return nullptr;
-	}
-	Tree *sourcesNode = sources_section();
-	if (!sourcesNode) {
-		return nullptr;
-	}
-
-	Tree *setsNode = sets_section();
-	if (!setsNode) {
-		return nullptr;
-	}
-
-	Tree *elementsNode = elements_section();
-	if (!elementsNode) {
-		return nullptr;
-	}
-
-	Tree *tuplesNode = tuples_section();
-	if (!tuplesNode) {
-		return nullptr;
-	}
-	Tree *aggregatesNode = aggregates_section();
-	if (!aggregatesNode) {
-		return nullptr;
-	}
-	Tree *actionsNode = actions_section();
-	if (!actionsNode) {
-		return nullptr;
-	}
-
-	Tree *progNode = new Tree(new AstNode(AstNodeType_PROGRAM, "program"));
-
-	progNode->children.push_back(librariesNode);
-	progNode->children.push_back(handlersNode);
-	progNode->children.push_back(renderersNode);
-	progNode->children.push_back(sourcesNode);
-	progNode->children.push_back(setsNode);
-
-	progNode->children.push_back(elementsNode);
-	progNode->children.push_back(tuplesNode);
-	progNode->children.push_back(aggregatesNode);
-	progNode->children.push_back(actionsNode);
-
-	if (!expect(TokenType::RIGHT_BRACE)) {
-		return nullptr;
-	}
-
-	return progNode;
+static Tree *NUMBER(Parser *parser) {
+	parser->increase_level();
+	return accept(parser, TokenType::NUMBER);
 }
 
-Tree *Parser::libraries_section() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::LIBRARIES)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, library_import)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
+static Tree *program(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::PROGRAM) ||
+		!expect(parser, TokenType::NAME) ||
+		!expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
+	Tree *prog_node = new Tree(new AstNode(AstNodeType::PROGRAM, "program"));
+
+	Tree *libraries_node = libraries_section(parser);
+	if (libraries_node) prog_node->children_.emplace_back(libraries_node);
 	
-	if (!accept(TokenType::LIBRARIES)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+	Tree *handlers_node = handlers_section(parser);
+	if (handlers_node) prog_node->children_.emplace_back(handlers_node);
 
-	Tree *libraryNode = new Tree(new AstNode(AstNodeType_LIBRARIES, "libraries"));
+	Tree *renderers_node = renderers_section(parser);
+	if (renderers_node) prog_node->children_.emplace_back(renderers_node);
 
-	
-	if (!ebnf_sequence(libraryNode, std::bind(&Parser::library_import, this))) {
+	Tree *sources_node = sources_section(parser);
+	if (sources_node) prog_node->children_.emplace_back(sources_node);
+
+	Tree *sets_node = sets_section(parser);
+	if (sets_node) prog_node->children_.emplace_back(sets_node);
+
+	Tree *elements_node = elements_section(parser);
+	if (elements_node) prog_node->children_.emplace_back(elements_node);
+
+	Tree *tuples_node = tuples_section(parser);
+	if (tuples_node) prog_node->children_.emplace_back(tuples_node);
+
+	Tree *aggregates_node = aggregates_section(parser);
+	if (aggregates_node) prog_node->children_.emplace_back(aggregates_node);
+
+	Tree *actions_node = actions_section(parser);
+	if (!actions_node) {
+		Tree::free(prog_node);
 		return nullptr;
 	}
 
-	
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	prog_node->children_.emplace_back(actions_node);
+
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
+		Tree::free(prog_node);
+		return nullptr;
+	}
+
+	return prog_node;
+}
+
+static Tree *libraries_section(Parser *parser) {
+	parser->increase_level();
+
+	if (!accept(parser, TokenType::LIBRARIES)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
+
+	Tree *libraryNode = new Tree(new AstNode(AstNodeType::LIBRARIES, "libraries"));
+
+	if (!ebnf_sequence(parser, libraryNode, library_import)) {
+		return nullptr;
+	}
+
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 
 	return libraryNode;
 }
 
-Tree *Parser::library_import() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::NAME)
-		&& expect(parser, TokenType::SEMICOLON);*/
-	//std::cout << "library_import" << std::endl;
-	Tree *nameNode = accept(TokenType::NAME);
+static Tree *library_import(Parser *parser) {
+	parser->increase_level();
+	Tree *nameNode = accept(parser, TokenType::NAME);
 	if (!nameNode) return nullptr;
 
-	if (!expect(TokenType::SEMICOLON)) {
+	if (!expect(parser, TokenType::SEMICOLON)) {
 		return nullptr;
 	}
 
-	Tree *libImport = new Tree(new AstNode(AstNodeType_LIB_IMPORT, "libImport"));
-	libImport->children.push_back(nameNode);
+	Tree *libImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "libImport"));
+	libImport->children_.push_back(nameNode);
 	return libImport;
 }
 
-Tree *Parser::handlers_section() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::HANDLERS)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, item_import)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
+static Tree *handlers_section(Parser *parser) {
+	parser->increase_level();
 
-	if (!accept(TokenType::HANDLERS)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+	if (!accept(parser, TokenType::HANDLERS)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	Tree *handlersNode = new Tree(new AstNode(AstNodeType_HANDLERS, "handlers"));
+	Tree *handlersNode = new Tree(new AstNode(AstNodeType::HANDLERS, "handlers"));
 
-	if (!ebnf_sequence(handlersNode, std::bind(&Parser::item_import, this))) {
+	if (!ebnf_sequence(parser, handlersNode, item_import)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return handlersNode;
 }
 
-Tree *Parser::renderers_section() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::RENDERERS)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, item_import)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
+static Tree *renderers_section(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::RENDERERS)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	if (!accept(TokenType::RENDERERS)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+	Tree *renderersNode = new Tree(new AstNode(AstNodeType::RENDERERS, "renderers"));
 
-	Tree *renderersNode = new Tree(new AstNode(AstNodeType_RENDERERS, "renderers"));
-
-	if (!ebnf_sequence(renderersNode, std::bind(&Parser::item_import, this))) {
+	if (!ebnf_sequence(parser, renderersNode, item_import)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return renderersNode;
 }
 
-Tree *Parser::sources_section() {
-	TRACE_CALL();
+static Tree *sources_section(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::SOURCES)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	/*return accept(parser, TokenType::SOURCES)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, item_import)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
-	if (!accept(TokenType::SOURCES)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+	Tree *handlersNode = new Tree(new AstNode(AstNodeType::SOURCES, "sources"));
 
-	Tree *handlersNode = new Tree(new AstNode(AstNodeType_SOURCES, "handlers"));
-
-	if (!ebnf_sequence(handlersNode, std::bind(&Parser::item_import, this))) {
+	if (!ebnf_sequence(parser, handlersNode, item_import)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return handlersNode;
 }
 
-Tree *Parser::sets_section() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::SETS)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, item_import)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
+static Tree *sets_section(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::SETS)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	if (!accept(TokenType::SETS)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+	Tree *setsNode = new Tree(new AstNode(AstNodeType::SETS, "sets"));
 
-	Tree *setsNode = new Tree(new AstNode(AstNodeType_SETS, "sets"));
-
-	if (!ebnf_sequence(setsNode, std::bind(&Parser::item_import, this))) {
+	if (!ebnf_sequence(parser, setsNode, item_import)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return setsNode;
 }
 
-Tree *Parser::item_import() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::NAME)
-		&& expect(parser, TokenType::FROM)
-		&& expr(parser)
-		&& expect(parser, TokenType::SEMICOLON);*/
-	Tree *nameNode = accept(TokenType::NAME);
+static Tree *item_import(Parser *parser) {
+	parser->increase_level();
+	Tree *nameNode = accept(parser, TokenType::NAME);
 	if (!nameNode) return nullptr;
 
-	if (!expect(TokenType::FROM)) {
+	if (!expect(parser, TokenType::FROM)) {
 		return nullptr;
 	}
 
-	Tree *dataNode = data();
+	Tree *dataNode = data(parser);
 	if (dataNode == nullptr) {
 		return nullptr;
 	}
-	if (!expect(TokenType::SEMICOLON)) {
+	if (!expect(parser, TokenType::SEMICOLON)) {
 		return nullptr;
 	}
 
-	Tree *itemImport = new Tree(new AstNode(AstNodeType_LIB_IMPORT, "itemImport"));
-	itemImport->children.push_back(nameNode);
-	itemImport->children.push_back(dataNode);
+	Tree *itemImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "itemImport"));
+	itemImport->children_.push_back(nameNode);
+	itemImport->children_.push_back(dataNode);
 	return itemImport;
 }
 
-Tree *Parser::elements_section() {
-	TRACE_CALL();
-	
-	/*return accept(parser, TokenType::ELEMENTS)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, element_declaration)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
-	if (!accept(TokenType::ELEMENTS)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+static Tree *elements_section(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::ELEMENTS)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	Tree *elementsNode = new Tree(new AstNode(AstNodeType_ELEMENTS, "elements"));
+	Tree *elementsNode = new Tree(new AstNode(AstNodeType::ELEMENTS, "elements"));
 
-	if (!ebnf_sequence(elementsNode, std::bind(&Parser::element_declaration, this))) {
+	if (!ebnf_sequence(parser, elementsNode, element_declaration)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return elementsNode;
 }
 
 
-Tree *Parser::tuples_section() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::TUPLES)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, element_declaration)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
-	if (!accept(TokenType::TUPLES)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+static Tree *tuples_section(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::TUPLES)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	Tree *tuplesNode = new Tree(new AstNode(AstNodeType_TUPLES, "tuples"));
+	Tree *tuplesNode = new Tree(new AstNode(AstNodeType::TUPLES, "tuples"));
 
-	if (!ebnf_sequence(tuplesNode, std::bind(&Parser::element_declaration, this))) {
+	if (!ebnf_sequence(parser, tuplesNode, element_declaration)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return tuplesNode;
 }
 
 
-Tree *Parser::aggregates_section() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::AGGREGATES)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, element_declaration)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
-	if (!accept(TokenType::AGGREGATES)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+static Tree *aggregates_section(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::AGGREGATES)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	Tree *aggregatesNode = new Tree(new AstNode(AstNodeType_AGGREGATES, "aggregates"));
+	Tree *aggregatesNode = new Tree(new AstNode(AstNodeType::AGGREGATES, "aggregates"));
 
-	if (!ebnf_sequence(aggregatesNode, std::bind(&Parser::element_declaration, this))) {
+	if (!ebnf_sequence(parser, aggregatesNode, element_declaration)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return aggregatesNode;
 }
 
-Tree *Parser::element_declaration() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::NAME)
-		&& expect(parser, TokenType::ASSIGN)
-		&& data(parser)
-		&& expect(parser, TokenType::SEMICOLON);*/
-	Tree *nameNode = accept(TokenType::NAME);
+static Tree *element_declaration(Parser *parser) {
+	parser->increase_level();
+	Tree *nameNode = accept(parser, TokenType::NAME);
 	if (!nameNode) return nullptr;
 
-	if (!expect(TokenType::ASSIGN)) {
+	if (!expect(parser, TokenType::ASSIGN)) {
 		return nullptr;
 	}
 
-	Tree *dataNode = data();
+	Tree *dataNode = data(parser);
 	if (dataNode == nullptr) {
 		return nullptr;
 	}
-	if (!expect(TokenType::SEMICOLON)) {
+	if (!expect(parser, TokenType::SEMICOLON)) {
 		return nullptr;
 	}
 
-	Tree *elementImport = new Tree(new AstNode(AstNodeType_LIB_IMPORT, "elementImport"));
-	elementImport->children.push_back(nameNode);
-	elementImport->children.push_back(dataNode);
+	Tree *elementImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "elementImport"));
+	elementImport->children_.push_back(nameNode);
+	elementImport->children_.push_back(dataNode);
 	return elementImport;
 }
 
 
-Tree *Parser::actions_section() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::ACTIONS)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, action)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
-	//if (!accept(parser, TokenType::ACTIONS)) return nullptr;
-	if (!accept(TokenType::ACTIONS)
-		|| !expect(TokenType::LEFT_BRACE)) return nullptr;
+static Tree *actions_section(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::ACTIONS)
+		|| !expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	Tree *actionsNode = new Tree(new AstNode(AstNodeType_ACTIONS, "actions"));
+	Tree *actionsNode = new Tree(new AstNode(AstNodeType::ACTIONS, "actions"));
 
-	if (!ebnf_sequence(actionsNode, std::bind(&Parser::action, this))) {
+	if (!ebnf_sequence(parser, actionsNode, action)) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 
@@ -562,341 +507,312 @@ Tree *Parser::actions_section() {
 
 }
 
-Tree *Parser::action() {
-	TRACE_CALL();
+static Tree *action(Parser *parser) {
+	parser->increase_level();
 	grammar_rule_t rules[] = {
-			std::bind(&Parser::block_actions, this),
-			std::bind(&Parser::expr_st, this),
-			std::bind(&Parser::sequence_action, this),
-			std::bind(&Parser::download_action, this),
-			std::bind(&Parser::upload_action, this),
-			std::bind(&Parser::render_action, this),
-			std::bind(&Parser::if_action, this),
-			std::bind(&Parser::while_action, this),
-			std::bind(&Parser::switch_action, this),
-			std::bind(&Parser::substitution_action, this),
-			std::bind(&Parser::timeline_action, this),
-			std::bind(&Parser::print_action, this)
+			block_actions,
+			expr_st,
+			sequence_action,
+			download_action,
+			upload_action,
+			render_action,
+			if_action,
+			while_action,
+			switch_action,
+			substitution_action,
+			timeline_action,
+			print_action
 	};
-	//std::cout << (sizeof(rules) / sizeof(*rules)) << std::endl;
-	return ebnf_one_of(rules, (sizeof(rules) / sizeof(*rules)));
+
+	return ebnf_one_of(parser, rules, size(rules));
 }
 
-Tree *Parser::block_actions() {
-	/*TRACE_CALL();
-	return expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, action)
-		&& expect(parser, TokenType::RIGHT_BRACE);*/
-	TRACE_CALL();
-	if (!accept(TokenType::LEFT_BRACE)) return nullptr;
+static Tree *block_actions(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::LEFT_BRACE)) return nullptr;
 
-	Tree *blockNode = new Tree(new AstNode(AstNodeType_BLOCK, "block"));
+	Tree *blockNode = new Tree(new AstNode(AstNodeType::BLOCK, "block"));
 
-	if (ebnf_sequence(blockNode, std::bind(&Parser::action, this))) {
+	if (ebnf_sequence(parser, blockNode, action)) {
 
-		if (!expect(TokenType::RIGHT_BRACE)) {
+		if (!expect(parser, TokenType::RIGHT_BRACE)) {
 			return nullptr;
 		}
 	}
 	return blockNode;
 }
 
-Tree *Parser::sequence_action() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::SEQUENCE)
-		&& expect(parser, TokenType::LEFT_BRACE)
-		&& ebnf_sequence(parser, action)
-		&& expect(parser, TokenType::RIGHT_BRACE)
-		&& expect(parser, TokenType::SEMICOLON);*/
+static Tree *sequence_action(Parser *parser) {
+	parser->increase_level();
 
-	if (!accept(TokenType::SEQUENCE)) return nullptr;
+	if (!accept(parser, TokenType::SEQUENCE)) return nullptr;
 
-	Tree *blockNode = block_actions();
+	Tree *blockNode = block_actions(parser);
 	if (blockNode == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::SEMICOLON)) return nullptr;
+	if (!accept(parser, TokenType::SEMICOLON)) return nullptr;
 
 
-	Tree *sequenceNode = new Tree(new AstNode(AstNodeType_SEQUENCE, "sequence"));
+	Tree *sequenceNode = new Tree(new AstNode(AstNodeType::SEQUENCE, "sequence"));
 
-	sequenceNode->children.push_back(blockNode);
+	sequenceNode->children_.push_back(blockNode);
 
 	return sequenceNode;
 }
 
-Tree *Parser::download_action() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::DOWNLOAD)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::FROM)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::WITH)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::SEMICOLON);*/
-	if (!accept(TokenType::DOWNLOAD)) return nullptr;
+static Tree *download_action(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::DOWNLOAD)) return nullptr;
 
-	Tree *idNode1 = expr();
+	Tree *idNode1 = expr(parser);
 	if (idNode1 == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::FROM)) return nullptr;
+	if (!accept(parser, TokenType::FROM)) return nullptr;
 
-	Tree *idNode2 = expr();
+	Tree *idNode2 = expr(parser);
 	if (idNode2 == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::WITH)) return nullptr;
+	if (!accept(parser, TokenType::WITH)) return nullptr;
 
-	Tree *idNode3 = expr();
+	Tree *idNode3 = expr(parser);
 	if (idNode3 == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::SEMICOLON)) return nullptr;
+	if (!accept(parser, TokenType::SEMICOLON)) return nullptr;
 
-	Tree *downloadNode = new Tree(new AstNode(AstNodeType_DOWNLOAD, "download"));
+	Tree *downloadNode = new Tree(new AstNode(AstNodeType::DOWNLOAD, "download"));
 
-	downloadNode->children.push_back(idNode1);
-	downloadNode->children.push_back(idNode2);
-	downloadNode->children.push_back(idNode3);
+	downloadNode->children_.push_back(idNode1);
+	downloadNode->children_.push_back(idNode2);
+	downloadNode->children_.push_back(idNode3);
 
 	return downloadNode;
 }
 
-Tree *Parser::upload_action() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::UPLOAD)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::TO)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::WITH)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::SEMICOLON);*/
+static Tree *upload_action(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::UPLOAD)) return nullptr;
 
-	if (!accept(TokenType::UPLOAD)) return nullptr;
-
-	Tree *idNode1 = id();
+	Tree *idNode1 = ID(parser);
 	if (idNode1 == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::TO)) return nullptr;
+	if (!accept(parser, TokenType::TO)) return nullptr;
 
-	Tree *idNode2 = id();
+	Tree *idNode2 = ID(parser);
 	if (idNode2 == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::WITH)) return nullptr;
+	if (!accept(parser, TokenType::WITH)) return nullptr;
 
-	Tree *idNode3 = id();
+	Tree *idNode3 = ID(parser);
 	if (idNode3 == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::SEMICOLON)) return nullptr;
+	if (!accept(parser, TokenType::SEMICOLON)) return nullptr;
 
-	Tree *uploadNode = new Tree(new AstNode(AstNodeType_UPLOAD, "upload"));
+	Tree *uploadNode = new Tree(new AstNode(AstNodeType::UPLOAD, "upload"));
 
-	uploadNode->children.push_back(idNode1);
-	uploadNode->children.push_back(idNode2);
-	uploadNode->children.push_back(idNode3);
+	uploadNode->children_.push_back(idNode1);
+	uploadNode->children_.push_back(idNode2);
+	uploadNode->children_.push_back(idNode3);
 
 	return uploadNode;
 }
 
-Tree *Parser::render_action() {
-	TRACE_CALL();
-	/*return accept(parser, TokenType::RENDER)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::WITH)
-		&& expr(parser)
-		&& expect(parser, TokenType::SEMICOLON);*/
-	if (!accept(TokenType::RENDER)) return nullptr;
+static Tree *render_action(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::RENDER)) return nullptr;
 
-	Tree *idNode = id();
+	Tree *idNode = ID(parser);
 	if (idNode == nullptr) {
 		return nullptr;
 	}
 
-	if (!accept(TokenType::WITH)) return nullptr;
+	if (!accept(parser, TokenType::WITH)) return nullptr;
 
-	Tree *exprNode = expr();
+	Tree *exprNode = expr(parser);
 	if (exprNode == nullptr) {
 		return nullptr;
 	}
-	if (!accept(TokenType::SEMICOLON)) return nullptr;
+	if (!accept(parser, TokenType::SEMICOLON)) return nullptr;
 
-	Tree *renderNode = new Tree(new AstNode(AstNodeType_RENDER, "render"));
+	Tree *renderNode = new Tree(new AstNode(AstNodeType::RENDER, "render"));
 
-	renderNode->children.push_back(idNode);
-	renderNode->children.push_back(exprNode);
+	renderNode->children_.push_back(idNode);
+	renderNode->children_.push_back(exprNode);
 
 	return renderNode;
 }
 
-Tree *Parser::while_action() {
-	TRACE_CALL();
-	if (!accept(TokenType::WHILE)
-		|| !expect(TokenType::LEFT_BRACKET)) return nullptr;
+static Tree *while_action(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::WHILE)
+		|| !expect(parser, TokenType::LEFT_BRACKET)) return nullptr;
 
-	Tree *exprNode = expr();
+	Tree *exprNode = expr(parser);
 	if (!exprNode) {
 		return nullptr;
 	}
-	if (!expect(TokenType::RIGHT_BRACKET)) {  
+	if (!expect(parser, TokenType::RIGHT_BRACKET)) {
 		return nullptr;
 	}
-	Tree *blockNode = block_actions();
+	Tree *blockNode = block_actions(parser);
 	if (blockNode == nullptr) {
 		return nullptr;
 	}
 
-	Tree *whileNode = new Tree(new AstNode(AstNodeType_WHILE, "while"));
+	Tree *whileNode = new Tree(new AstNode(AstNodeType::WHILE, "while"));
 
-	whileNode->children.push_back(exprNode);
-	whileNode->children.push_back(blockNode);
+	whileNode->children_.push_back(exprNode);
+	whileNode->children_.push_back(blockNode);
 	return whileNode;
 }
 
-Tree *Parser::switch_action() {
-	if (!accept(TokenType::SWITCH)
-		|| !expect(TokenType::LEFT_BRACKET)) return nullptr;
+static Tree *switch_action(Parser *parser) {
+	if (!accept(parser, TokenType::SWITCH)
+		|| !expect(parser, TokenType::LEFT_BRACKET)) return nullptr;
 
-	Tree *exprNode = expr();
+	Tree *exprNode = expr(parser);
 
 	if (!exprNode) {
 		return nullptr;
 	}
-	if (!expect(TokenType::RIGHT_BRACKET)) {
+	if (!expect(parser, TokenType::RIGHT_BRACKET)) {
 		return nullptr;
 	}
-	if (!expect(TokenType::LEFT_BRACE)) {
-		return nullptr;
-	}
-
-	Tree *switchNode = new Tree(new AstNode(AstNodeType_SWITCH, "switch"));
-	switchNode->children.push_back(exprNode);
-
-	if (!ebnf_sequence(switchNode, std::bind(&Parser::switch_operator, this))) {
+	if (!expect(parser, TokenType::LEFT_BRACE)) {
 		return nullptr;
 	}
 
-	if (accept(TokenType::DEFAULT)) {
-		if (!expect(TokenType::COLON)) {
+	Tree *switchNode = new Tree(new AstNode(AstNodeType::SWITCH, "switch"));
+	switchNode->children_.push_back(exprNode);
+
+	if (!ebnf_sequence(parser, switchNode, switch_operator)) {
+		return nullptr;
+	}
+
+	if (accept(parser, TokenType::DEFAULT)) {
+		if (!expect(parser, TokenType::COLON)) {
 			return nullptr;
 		}
-		Tree *default_node = new Tree(new AstNode(AstNodeType_DEFAULT, "default"));
-		Tree *blockNode = action();
-		if (blockNode == nullptr || !get_error().empty()) {
+		Tree *default_node = new Tree(new AstNode(AstNodeType::DEFAULT, "default"));
+		Tree *blockNode = action(parser);
+		if (blockNode == nullptr || !parser->get_error().empty()) {
 			return nullptr;
 		}
-		default_node->children.push_back(blockNode);
-		switchNode->children.push_back(default_node);
+		default_node->children_.push_back(blockNode);
+		switchNode->children_.push_back(default_node);
 	}
 
-	if (!expect(TokenType::RIGHT_BRACE)) {
+	if (!expect(parser, TokenType::RIGHT_BRACE)) {
 		return nullptr;
 	}
 	return switchNode;
 }
 
-Tree *Parser::switch_operator() {
-	if (!accept(TokenType::CASE)) return nullptr;
+static Tree *switch_operator(Parser *parser) {
+	if (!accept(parser, TokenType::CASE)) return nullptr;
 
-	Tree *exprNode = expr();
+	Tree *exprNode = expr(parser);
 
 	if (!exprNode) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::COLON)) {
+	if (!expect(parser, TokenType::COLON)) {
 		return nullptr;
 	}
 
-	Tree *actionNode = action();
+	Tree *actionNode = action(parser);
 	if (actionNode == nullptr) {
 		return nullptr;
 	}
 
-	Tree *case_node = new Tree(new AstNode(AstNodeType_CASE, "case"));
-	case_node->children.push_back(exprNode);
-	case_node->children.push_back(actionNode);
+	Tree *case_node = new Tree(new AstNode(AstNodeType::CASE, "case"));
+	case_node->children_.push_back(exprNode);
+	case_node->children_.push_back(actionNode);
 	return case_node;
 }
 
-Tree *Parser::print_action() {
-	if (!accept(TokenType::PRINT)
-		|| !expect(TokenType::LEFT_BRACKET)) {
+static Tree *print_action(Parser *parser) {
+	if (!accept(parser, TokenType::PRINT)
+		|| !expect(parser, TokenType::LEFT_BRACKET)) {
 		return nullptr;
 	}
 
-	Tree *exprNode = expr();
+	Tree *exprNode = expr(parser);
 
 	if (!exprNode) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACKET)
-		|| !expect(TokenType::SEMICOLON)) {
+	if (!expect(parser, TokenType::RIGHT_BRACKET)
+		|| !expect(parser, TokenType::SEMICOLON)) {
 		return nullptr;
 	}
 
-	Tree *printNode = new Tree(new AstNode(AstNodeType_PRINT, "print"));
-	printNode->children.push_back(exprNode);
+	Tree *printNode = new Tree(new AstNode(AstNodeType::PRINT, "print"));
+	printNode->children_.push_back(exprNode);
 	return printNode;
 }
 
-Tree *Parser::if_action() {
-	/*TRACE_CALL();
+static Tree *if_action(Parser *parser) {
+	/*parser->increase_level();
 	return accept(parser, TokenType::IF)
 		&& expect(parser, TokenType::LEFT_BRACKET)
 		&& expr(parser)
 		&& expect(parser, TokenType::RIGHT_BRACKET)
 		&& block_actions(parser)
 		&& (accept(parser, TokenType::ELSE) ? block_actions(parser) : true);*/
-	TRACE_CALL();
+	parser->increase_level();
 
-	if (!accept(TokenType::IF)
-		|| !expect(TokenType::LEFT_BRACKET)) return nullptr;
-	Tree *exprNode = expr();
+	if (!accept(parser, TokenType::IF)
+		|| !expect(parser, TokenType::LEFT_BRACKET)) return nullptr;
+	Tree *exprNode = expr(parser);
 
 	if (!exprNode) {
 		return nullptr;
 	}
 
-	if (!expect(TokenType::RIGHT_BRACKET)) {   
+	if (!expect(parser, TokenType::RIGHT_BRACKET)) {
 		return nullptr;
 	}
 
-	Tree *actionNode = action();
+	Tree *actionNode = action(parser);
 
 	if (actionNode == nullptr) {
 		return nullptr;
 	}
-	Tree *ifNode = new Tree(new AstNode(AstNodeType_IF, "if"));
+	Tree *ifNode = new Tree(new AstNode(AstNodeType::IF, "if"));
 
-	ifNode->children.push_back(exprNode);
-	ifNode->children.push_back(actionNode);
+	ifNode->children_.push_back(exprNode);
+	ifNode->children_.push_back(actionNode);
 
-	if (accept(TokenType::ELSE)) {
+	if (accept(parser, TokenType::ELSE)) {
 
-		Tree *elseNode = action();
-		if (elseNode == nullptr || !get_error().empty()) {
+		Tree *elseNode = action(parser);
+		if (elseNode == nullptr || !parser->get_error().empty()) {
 			return nullptr;
 		}
 
-		ifNode->children.push_back(elseNode);
+		ifNode->children_.push_back(elseNode);
 	}
 	return ifNode;
 }
 
 /*
-static bool cases_action() {
+static bool cases_action(Parser *parser) {
 	return accept(parser, TokenType::CASE)
 		&& expr(parser)
 		&& accept(parser, TokenType::OF)
@@ -904,8 +820,8 @@ static bool cases_action() {
 
 }*/
 
-Tree *Parser::substitution_action() {
-	TRACE_CALL();
+static Tree *substitution_action(Parser *parser) {
+	parser->increase_level();
 	/*return accept(parser, TokenType::SUBSTITUTE)
 		&& expect(parser, TokenType::NAME)
 		&& expect(parser, TokenType::FOR)
@@ -914,69 +830,69 @@ Tree *Parser::substitution_action() {
 		&& expr(parser)
 		&& expect(parser, TokenType::SEMICOLON);*/
 
-	if (!accept(TokenType::SUBSTITUTE)) return nullptr;
+	if (!accept(parser, TokenType::SUBSTITUTE)) return nullptr;
 
-	Tree *idNode1 = expect(TokenType::NAME);
+	Tree *idNode1 = expect(parser, TokenType::NAME);
 	if (!idNode1) return nullptr;
 
-	if (!expect(TokenType::FOR)) return nullptr;
+	if (!expect(parser, TokenType::FOR)) return nullptr;
 
-	Tree *idNode2 = expect(TokenType::NAME);
+	Tree *idNode2 = expect(parser, TokenType::NAME);
 	if (!idNode2) return nullptr;
 
-	if (!expect(TokenType::WHEN)) return nullptr;
+	if (!expect(parser, TokenType::WHEN)) return nullptr;
 
-	Tree *exprNode = expr();
+	Tree *exprNode = expr(parser);
 	if (!exprNode) return nullptr;
 
-	if (!expect(TokenType::SEMICOLON)) return nullptr;
+	if (!expect(parser, TokenType::SEMICOLON)) return nullptr;
 
-	Tree *substitution_node = new Tree(new AstNode(AstNodeType_SUBSTITUTION, "substitution"));
-	substitution_node->children.push_back(idNode1);
-	substitution_node->children.push_back(idNode2);
-	substitution_node->children.push_back(exprNode);
+	Tree *substitution_node = new Tree(new AstNode(AstNodeType::SUBSTITUTION, "substitution"));
+	substitution_node->children_.push_back(idNode1);
+	substitution_node->children_.push_back(idNode2);
+	substitution_node->children_.push_back(exprNode);
 	return substitution_node;
 
 
 }
 
-Tree *Parser::timeline_action() {
+static Tree *timeline_action(Parser *parser) {
 
-	/*TRACE_CALL();
+	/*parser->increase_level();
 	return accept(parser, TokenType::TIMELINE)
 		&& timeline_overload(parser)
 		&& block_actions(parser);*/
-	if (!accept(TokenType::TIMELINE)) return nullptr;
+	if (!accept(parser, TokenType::TIMELINE)) return nullptr;
 
-	Tree *exprNode = timeline_overload();
+	Tree *exprNode = timeline_overload(parser);
 	if (exprNode == nullptr) {
 		return nullptr;
 	}
 
-	Tree *actionNode = block_actions();
+	Tree *actionNode = block_actions(parser);
 	if (actionNode == nullptr) {
 		return nullptr;
 	}
 
-	Tree *timelineNode = new Tree(new AstNode(AstNodeType_TIMELINE, "timeline"));
-	timelineNode->children.push_back(exprNode);
-	timelineNode->children.push_back(actionNode);
+	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE, "timeline"));
+	timelineNode->children_.push_back(exprNode);
+	timelineNode->children_.push_back(actionNode);
 	return timelineNode;
 }
 
-Tree *Parser::timeline_overload() {
-	TRACE_CALL();
+static Tree *timeline_overload(Parser *parser) {
+	parser->increase_level();
 
 	grammar_rule_t rules[] = {
-		std::bind(&Parser::timeline_expr, this),
-		std::bind(&Parser::timeline_as, this),
-		std::bind(&Parser::timeline_until, this)
+			timeline_expr,
+			timeline_as,
+			timeline_until
 	};
-	return ebnf_one_of(rules, 3);
+	return ebnf_one_of(parser, rules, size(rules));
 }
 
-Tree *Parser::timeline_expr() {
-	TRACE_CALL();
+static Tree *timeline_expr(Parser *parser) {
+	parser->increase_level();
 	/*return accept(parser, TokenType::LEFT_BRACKET)
 		&& expr(parser)
 		&& expect(parser, TokenType::COLON)
@@ -984,146 +900,147 @@ Tree *Parser::timeline_expr() {
 		&& expect(parser, TokenType::COLON)
 		&& expr(parser)
 		&& expect(parser, TokenType::RIGHT_BRACKET);*/
-	if (!accept(TokenType::LEFT_BRACKET)) return nullptr;
+	if (!accept(parser, TokenType::LEFT_BRACKET)) return nullptr;
 
-	Tree *exprNode1 = expr();
+	Tree *exprNode1 = expr(parser);
 	if (exprNode1 == nullptr) {
 		return nullptr;
 	}
-	if (!expect(TokenType::COLON)) return nullptr;
+	if (!expect(parser, TokenType::COLON)) return nullptr;
 
-	Tree *exprNode2 = expr();
+	Tree *exprNode2 = expr(parser);
 	if (exprNode2 == nullptr) {
 		return nullptr;
 	}
-	if (!expect(TokenType::COLON)) return nullptr;
+	if (!expect(parser, TokenType::COLON)) return nullptr;
 
-	Tree *exprNode3 = expr();
+	Tree *exprNode3 = expr(parser);
 	if (exprNode3 == nullptr) {
 		return nullptr;
 	}
-	if (!expect(TokenType::RIGHT_BRACKET)) return nullptr;
+	if (!expect(parser, TokenType::RIGHT_BRACKET)) return nullptr;
 
-	Tree *timelineNode = new Tree(new AstNode(AstNodeType_TIMELINE_EXPR, "timeline_expr"));
-	timelineNode->children.push_back(exprNode1);
-	timelineNode->children.push_back(exprNode2);
-	timelineNode->children.push_back(exprNode3);
+	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE_EXPR, "timeline_expr"));
+	timelineNode->children_.push_back(exprNode1);
+	timelineNode->children_.push_back(exprNode2);
+	timelineNode->children_.push_back(exprNode3);
 	return timelineNode;
 }
 
-Tree *Parser::timeline_as() {
-	TRACE_CALL();
+static Tree *timeline_as(Parser *parser) {
+	parser->increase_level();
 	/*return accept(parser, TokenType::AS)
 		&& expect(parser, TokenType::NAME);*/
-	if (!accept(TokenType::AS)) return nullptr;
+	if (!accept(parser, TokenType::AS)) return nullptr;
 
-	Tree *idNode = id();
+	Tree *idNode = ID(parser);
 	if (idNode == nullptr) {
 		return nullptr;
 	}
-	Tree *timelineNode = new Tree(new AstNode(AstNodeType_TIMELINE_AS, "timeline_as"));
-	timelineNode->children.push_back(idNode);
+	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE_AS, "timeline_as"));
+	timelineNode->children_.push_back(idNode);
 	return timelineNode;
 }
 
-Tree *Parser::timeline_until() {
-	TRACE_CALL();
+static Tree *timeline_until(Parser *parser) {
+	parser->increase_level();
 	/*return accept(parser, TokenType::UNTIL)
 		&& expr(parser);*/
-	if (!accept(TokenType::UNTIL)) return nullptr;
+	if (!accept(parser, TokenType::UNTIL)) return nullptr;
 
-	Tree *exprNode = expr();
+	Tree *exprNode = expr(parser);
 	if (exprNode == nullptr) {
 		return nullptr;
 	}
-	Tree *timelineNode = new Tree(new AstNode(AstNodeType_TIMELINE_UNTIL, "timeline_until"));
-	timelineNode->children.push_back(exprNode);
+	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE_UNTIL, "timeline_until"));
+	timelineNode->children_.push_back(exprNode);
 	return timelineNode;
 }
 
 
 
-Tree *Parser::expr() {
-	TRACE_CALL();
-	return assign();
+static Tree *expr(Parser *parser) {
+	parser->increase_level();
+	return assign(parser);
 }
 
-Tree *Parser::expr_st() {
-	/*TRACE_CALL();
+static Tree *expr_st(Parser *parser) {
+	/*parser->increase_level();
 	if (expr(parser)) {
 		return expect(parser, TokenType::SEMICOLON);
 	}
 	return accept(parser, TokenType::SEMICOLON);*/
-	TRACE_CALL();
-	Tree *exprNode = expr();
+	parser->increase_level();
+	Tree *exprNode = expr(parser);
 
 	if (exprNode) {
-		expect(TokenType::SEMICOLON);
-	}else {
-		accept(TokenType::SEMICOLON);
+		expect(parser, TokenType::SEMICOLON);
+	}
+	else {
+		accept(parser, TokenType::SEMICOLON);
 	}
 	return exprNode;
 }
 
-Tree *Parser::assign() {
-	TRACE_CALL();
-	return ebnf_ap_main_rule(std::bind(&Parser::log_or, this), std::bind(&Parser::assign_ap, this));
+static Tree *assign(Parser *parser) {
+	parser->increase_level();
+	return ebnf_ap_main_rule(parser, log_or, assign_ap);
 }
-Tree *Parser::assign_ap() {
-	TRACE_CALL();
+static Tree *assign_ap(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::ASSIGN
 	};
-	return ebnf_ap_recursive_rule(arr, (sizeof(arr) / sizeof(*arr)), std::bind(&Parser::log_or, this), std::bind(&Parser::assign_ap, this));
+	return ebnf_ap_recursive_rule(parser, arr, (sizeof(arr) / sizeof(*arr)), log_or, assign_ap);
 }
 
-Tree *Parser::log_or() {
-	TRACE_CALL();
-	return ebnf_ap_main_rule(std::bind(&Parser::log_and, this), std::bind(&Parser::log_or_ap, this));
+static Tree *log_or(Parser *parser) {
+	parser->increase_level();
+	return ebnf_ap_main_rule(parser, log_and, log_or_ap);
 }
 
-Tree *Parser::log_or_ap() {
-	TRACE_CALL();
+static Tree *log_or_ap(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::OR
 	};
-	return ebnf_ap_recursive_rule(arr, (sizeof(arr) / sizeof(*arr)), std::bind(&Parser::log_and, this), std::bind(&Parser::log_or_ap, this));
+	return ebnf_ap_recursive_rule(parser, arr, (sizeof(arr) / sizeof(*arr)), log_and, log_or_ap);
 }
 
-Tree *Parser::log_and() {
-	TRACE_CALL();
-	return ebnf_ap_main_rule(std::bind(&Parser::eq, this), std::bind(&Parser::log_and_ap, this));
+static Tree *log_and(Parser *parser) {
+	parser->increase_level();
+	return ebnf_ap_main_rule(parser, eq, log_and_ap);
 }
 
-Tree *Parser::log_and_ap() {
-	TRACE_CALL();
+static Tree *log_and_ap(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::AND
 	};
-	return ebnf_ap_recursive_rule(arr, (sizeof(arr) / sizeof(*arr)), std::bind(&Parser::eq, this), std::bind(&Parser::log_and_ap, this));
+	return ebnf_ap_recursive_rule(parser, arr, (sizeof(arr) / sizeof(*arr)), eq, log_and_ap);
 }
 
-Tree *Parser::eq() {
-	TRACE_CALL();
-	return ebnf_ap_main_rule(std::bind(&Parser::rel, this), std::bind(&Parser::eq_ap, this));
+static Tree *eq(Parser *parser) {
+	parser->increase_level();
+	return ebnf_ap_main_rule(parser, rel, eq_ap);
 }
 
-Tree *Parser::eq_ap() {
-	TRACE_CALL();
+static Tree *eq_ap(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::EQUAL,
 		TokenType::NOTEQUAL
 	};
-	return ebnf_ap_recursive_rule(arr, (sizeof(arr) / sizeof(*arr)), std::bind(&Parser::rel, this), std::bind(&Parser::eq_ap, this));
+	return ebnf_ap_recursive_rule(parser, arr, (sizeof(arr) / sizeof(*arr)), rel, eq_ap);
 }
 
-Tree *Parser::rel() {
-	TRACE_CALL();
-	return ebnf_ap_main_rule(std::bind(&Parser::add, this), std::bind(&Parser::rel_ap, this));
+static Tree *rel(Parser *parser) {
+	parser->increase_level();
+	return ebnf_ap_main_rule(parser, add, rel_ap);
 }
 
-Tree *Parser::rel_ap() {
-	TRACE_CALL();
+static Tree *rel_ap(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::MORE,
 		TokenType::LESS,
@@ -1132,107 +1049,107 @@ Tree *Parser::rel_ap() {
 
 	};
 
-	return ebnf_ap_recursive_rule(arr, (sizeof(arr) / sizeof(*arr)), std::bind(&Parser::add, this), std::bind(&Parser::rel_ap, this));
+	return ebnf_ap_recursive_rule(parser, arr, (sizeof(arr) / sizeof(*arr)), add, rel_ap);
 }
 
-Tree *Parser::add() {
-	TRACE_CALL();
-	return ebnf_ap_main_rule(std::bind(&Parser::mult, this), std::bind(&Parser::add_ap, this));
+static Tree *add(Parser *parser) {
+	parser->increase_level();
+	return ebnf_ap_main_rule(parser, mult, add_ap);
 }
-Tree *Parser::add_ap() {
-	TRACE_CALL();
+static Tree *add_ap(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::PLUS,
 		TokenType::MINUS
 	};
-	return ebnf_ap_recursive_rule(arr, (sizeof(arr) / sizeof(*arr)), std::bind(&Parser::mult, this), std::bind(&Parser::add_ap, this));
+	return ebnf_ap_recursive_rule(parser, arr, (sizeof(arr) / sizeof(*arr)), mult, add_ap);
 }
 
-Tree *Parser::mult() {
-	TRACE_CALL();
-	return ebnf_ap_main_rule(std::bind(&Parser::unary, this), std::bind(&Parser::mult_ap, this));
+static Tree *mult(Parser *parser) {
+	parser->increase_level();
+	return ebnf_ap_main_rule(parser, unary, mult_ap);
 }
-Tree *Parser::mult_ap() {
-	TRACE_CALL();
+static Tree *mult_ap(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::MULT,
 		TokenType::DIV,
 		TokenType::MOD
 
 	};
-	return ebnf_ap_recursive_rule(arr, (sizeof(arr) / sizeof(*arr)), std::bind(&Parser::unary, this), std::bind(&Parser::mult_ap, this));
+	return ebnf_ap_recursive_rule(parser, arr, (sizeof(arr) / sizeof(*arr)), unary, mult_ap);
 }
 
-Tree *Parser::unary() {
-	TRACE_CALL();
+static Tree *unary(Parser *parser) {
+	parser->increase_level();
 	TokenType arr[] = {
 		TokenType::PLUS,
 		TokenType::MINUS,
 		TokenType::NOT
 	};
-	Tree *opNode = ebnf_one_of_lexem(arr, (sizeof(arr) / sizeof(*arr)));
-	Tree *primNode = primary();
+	Tree *opNode = ebnf_one_of_lexem(parser, arr, (sizeof(arr) / sizeof(*arr)));
+	Tree *primNode = primary(parser);
 
 	if (opNode) {
-		opNode->children.push_back(primNode);
+		opNode->children_.push_back(primNode);
 		return opNode;
 	}
 	return primNode;
 }
 
-Tree *Parser::primary() {
-	TRACE_CALL();
-	grammar_rule_t arr[] = {
-		std::bind(&Parser::number, this),
-		std::bind(&Parser::string, this),
-		std::bind(&Parser::var_or_call, this),
-		std::bind(&Parser::parentheses, this)
+static Tree *primary(Parser *parser) {
+	parser->increase_level();
+	grammar_rule_t rules[] = {
+		NUMBER,
+		String,
+		var_or_call,
+		parentheses
 	};
-	return ebnf_one_of(arr, (sizeof(arr) / sizeof(*arr)));
+	return ebnf_one_of(parser, rules, size(rules));
 }
 
-Tree *Parser::var_or_call() {
-	TRACE_CALL();
-	Tree *varNode = id();
+static Tree *var_or_call(Parser *parser) {
+	parser->increase_level();
+	Tree *varNode = ID(parser);
 
-	Tree *argListNode = fn_call();
+	Tree *argListNode = fn_call(parser);
 
 	if (argListNode) {
-		varNode->children.push_back(argListNode);
+		varNode->children_.push_back(argListNode);
 	}
 	return varNode;
 }
-Tree *Parser::parentheses() {
-	TRACE_CALL();
-	if (!accept(TokenType::LEFT_BRACKET)) return nullptr;
-	Tree *exprNode = expr();
-	expect(TokenType::RIGHT_BRACKET); // @todo mb 
+static Tree *parentheses(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::LEFT_BRACKET)) return nullptr;
+	Tree *exprNode = expr(parser);
+	expect(parser, TokenType::RIGHT_BRACKET); // @todo mb 
 	return exprNode;
 }
-Tree *Parser::fn_call() {
-	if (!accept(TokenType::LEFT_BRACKET)) return nullptr;
-	Tree *argListNode = arg_list();
-	expect(TokenType::RIGHT_BRACKET); 
+static Tree *fn_call(Parser *parser) {
+	if (!accept(parser, TokenType::LEFT_BRACKET)) return nullptr;
+	Tree *argListNode = arg_list(parser);
+	expect(parser, TokenType::RIGHT_BRACKET);
 	return argListNode;
 }
 
-Tree *Parser::arg_list() {
-	/*TRACE_CALL();
+static Tree *arg_list(Parser *parser) {
+	/*parser->increase_level();
 	return expr(parser)
 		&& (accept(parser, TokenType::COMMA) ? arg_list(parser) : true);*/
-	TRACE_CALL();
-	Tree *exprNode = expr();
-	Tree *argListNode = new Tree(new AstNode(AstNodeType_ARGLIST, "arglist"));
+	parser->increase_level();
+	Tree *exprNode = expr(parser);
+	Tree *argListNode = new Tree(new AstNode(AstNodeType::ARGLIST, "arglist"));
 
 	if (exprNode != nullptr) {
-		//List_add(argListNode->children, exprNode);
-		argListNode->children.push_back(exprNode);
+		//List_add(argListNode->children_, exprNode);
+		argListNode->children_.push_back(exprNode);
 		while (true) {
-			if (!accept(TokenType::COMMA)) break;
+			if (!accept(parser, TokenType::COMMA)) break;
 
-			exprNode = expr();
+			exprNode = expr(parser);
 			if (exprNode) {
-				argListNode->children.push_back(exprNode);
+				argListNode->children_.push_back(exprNode);
 			}
 			else {
 				break;
@@ -1242,47 +1159,43 @@ Tree *Parser::arg_list() {
 	return argListNode;
 }
 
-Tree *Parser::data() {
-	TRACE_CALL();
-	grammar_rule_t arr[] = {
-		std::bind(&Parser::expr, this),
-		std::bind(&Parser::arr_ini, this)
+static Tree *data(Parser *parser) {
+	parser->increase_level();
+	grammar_rule_t rules[] = {
+		expr,
+		arr_ini,
 	};
-	return ebnf_one_of(arr, 2);
+	return ebnf_one_of(parser, rules, size(rules));
 }
 
-Tree *Parser::arr_ini() {
-	TRACE_CALL();
-	if (!accept(TokenType::LEFT_BRACE)) return nullptr;
-	Tree *argListNode = arg_list();
-	expect(TokenType::RIGHT_BRACE); 
+static Tree *arr_ini(Parser *parser) {
+	parser->increase_level();
+	if (!accept(parser, TokenType::LEFT_BRACE)) return nullptr;
+	Tree *argListNode = arg_list(parser);
+	expect(parser, TokenType::RIGHT_BRACE);
 }
-
-static AstNodeType TokenType_toAstNodeType(TokenType type) {
+static AstNodeType tokenType_to_astType(TokenType type) {
 	switch (type)
 	{
-	case TokenType::ASSIGN: return AstNodeType_ASSIGN;
-	case TokenType::PLUS: return AstNodeType_ADD;
-	case TokenType::MINUS: return AstNodeType_SUB;
-	case TokenType::MULT: return AstNodeType_MUL;
-	case TokenType::DIV: return AstNodeType_DIV;
-	case TokenType::MOD: return AstNodeType_MOD;
-	case TokenType::EQUAL: return AstNodeType_EQUAL;
-	case TokenType::NOTEQUAL: return AstNodeType_NOTEQUAL;
-	case TokenType::NOT: return AstNodeType_NOT;
-	case TokenType::MORE: return AstNodeType_MORE;
-	case TokenType::LESS: return AstNodeType_LESS;
-	case TokenType::MORE_OR_EQUAL: return AstNodeType_MORE_OR_EQUAL;
-	case TokenType::LESS_OR_EQUAL: return AstNodeType_LESS_OR_EQUAL;
-	case TokenType::AND: return AstNodeType_AND;
-	case TokenType::OR: return AstNodeType_OR;
-
-	case TokenType::NAME: return AstNodeType_ID;
-	case TokenType::NUMBER: return AstNodeType_NUMBER;
-	case TokenType::STRING_LITERAL: return AstNodeType_STRING;
-	case TokenType::LOGIC: return AstNodeType_BOOL;
-
-	default:
-		return AstNodeType_UNKNOWN;
+	case TokenType::ASSIGN: return AstNodeType::ASSIGN;
+	case TokenType::PLUS: return AstNodeType::ADD;
+	case TokenType::MINUS: return AstNodeType::SUB;
+	case TokenType::MULT: return AstNodeType::MUL;
+	case TokenType::DIV: return AstNodeType::DIV;
+	case TokenType::MOD: return AstNodeType::MOD;
+	case TokenType::EQUAL: return AstNodeType::EQUAL;
+	case TokenType::NOTEQUAL: return AstNodeType::NOTEQUAL;
+	case TokenType::NOT: return AstNodeType::NOT;
+	case TokenType::MORE: return AstNodeType::MORE;
+	case TokenType::LESS: return AstNodeType::LESS;
+	case TokenType::MORE_OR_EQUAL: return AstNodeType::MORE_OR_EQUAL;
+	case TokenType::LESS_OR_EQUAL: return AstNodeType::LESS_OR_EQUAL;
+	case TokenType::AND: return AstNodeType::AND;
+	case TokenType::OR: return AstNodeType::OR;
+	case TokenType::NAME: return AstNodeType::ID;
+	case TokenType::NUMBER: return AstNodeType::NUMBER;
+	case TokenType::STRING_LITERAL: return AstNodeType::STRING;
+	case TokenType::LOGIC: return AstNodeType::BOOL;
+	default: return AstNodeType::UNKNOWN;
 	}
 }
