@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <algorithm>
 
@@ -84,35 +84,41 @@ public:
 	}
 };
 
-class Tree{
+class Tree {
 public:
-	AstNode * value;
-	std::vector<Tree*> children;
 
 	Tree()
-	{
+	{}
 
-	}
+	Tree(AstNode * value) : value(value)
+	{}
 
-	Tree(AstNode * value) : value(value){
-
-	}
-
-	/*void print() {
-
-		std::cout << value->name << std::endl;
-		
-		std::for_each(children.begin(),
-			children.end(),
-			[](void * child) {
-				((Tree *)child)->print();
+	void print(std::ostream &file, const std::string &indent = "", int root = 1, int last = 1) {
+		file << indent;
+		std::string new_indent = "";
+		if (last) {
+			if (!root) {
+				file << "`-";
+				new_indent = indent + "**";
+			} else {
+				new_indent = indent;
 			}
-		);
-	}*/
+		} else {
+			file << "|-";
+			new_indent = indent + "|*";
+		}
+		AstNode* astNode = this->value;
+		file << astNode->value + "\n";
+		std::vector<Tree*> children = (this->children);
+		size_t count = children.size();
+		for (int i = 0; i < count; ++i) {
+			children.at(i)->print(file, new_indent, 0, i == count - 1);
+		}
+	}
 
-	
-	
-
+public:
+	AstNode* value;
+	std::vector<Tree*> children;
 };
 
 /*TRACE_CALL();

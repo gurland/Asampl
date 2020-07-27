@@ -4,14 +4,15 @@
 #include "pch.h"
 
 #include <iostream>
+#include <cstdio>
 #include <fstream>
+#include <string>
+#include <opencv2/opencv.hpp>
 
-#include <string> 
 #include "lexer.h"
 #include "parser.h"
 #include "print_ast.h"
 #include "interpreter.h"
-#include <opencv2/opencv.hpp>
 
 
 
@@ -21,33 +22,39 @@ int main(int argc, char *argv[])
 
 	//std::fstream fileStream("D:/test.txt");
 	if (argc < 2) {
-		std::cout << "Error, no input file specified";
+		std::cerr << "Error, no input file specified";
 		return 0;
 	}
-	const char * fileName = argv[1];
+	const char *file_name = argv[1];
 
-	std::fstream fileStream(fileName);
+	std::fstream file_stream(file_name);
 	//std::cout << "File: "<< fileName << std::endl;
 
-	if (!fileStream) {
-		std::cout << "Error while trying to open input file";
+	if (!file_stream) {
+		std::cerr << "Error while trying to open input file";
 		return 0;
 	}
 
-	std::vector<Lexem> lexem_sequence;
-	int code = Lexer_splitTokens(&fileStream, &lexem_sequence);
+	std::vector<Lexer::Token> lexem_sequence;
+	int code = Lexer::split_tokens(file_stream, lexem_sequence);
 	//LexemPrint(&lexem_sequence);
 
 	if (code == -1) {
-		std::cout << "Error while reading program file stream";
+		std::cerr << "Error while reading program file stream";
 		return 0;
 	}
 
-	Tree* tree = parser_buid_tree(&lexem_sequence);
+	token_print(lexem_sequence);
+	
+	Parser p(&lexem_sequence);
+	Tree* tree = p.buid_tree();
+	//Tree* tree = parser_buid_tree(&lexem_sequence);
 	if (!tree) {
-		std::cout << "Error while parsing sequence of lexemes";
+		std::cerr << "Error while parsing sequence of lexemes";
 		return 0;
 	}
+
+	tree->print(std::cout);
 
 	//std::ofstream myfile;
 	//myfile.open("D:/tree.txt");

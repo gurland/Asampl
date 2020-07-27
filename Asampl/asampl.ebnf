@@ -1,14 +1,14 @@
 Влад Песчанский, [01.05.19 21:02]
 
 program = 'Program', ID, '{',
-    libraries section,
-    handlers section,
-    renderers section,
-    sources section,
-    sets section,
-    elements section,
-    tuples section,
-    aggregates section,
+    [ libraries section ],
+    [ handlers section ],
+    [ renderers section ],
+    [ sources section ],
+    [ sets section ],
+    [ elements section ],
+    [ tuples section ],
+    [ aggregates section ],
     actions section,
 '}';
 

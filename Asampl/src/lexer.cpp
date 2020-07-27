@@ -15,668 +15,656 @@
 #include <string>
 #include <map>
 
-struct comp {
-	bool operator() (const std::string& lhs, const std::string& rhs) const {
-		return _stricmp(lhs.c_str(), rhs.c_str()) < 0;
-	}
-};
+namespace Lexer {
 
-
-std::map <std::string, LexemType, comp> program_key_words = {
-	
-	{ "PROGRAM", LexemType_PROGRAM },
-	{ "LIBRARIES", LexemType_LIBRARIES },
-	{ "HANDLERS", LexemType_HANDLERS },
-	{ "RENDERERS", LexemType_RENDERERS },
-	{ "SOURCES", LexemType_SOURCES },
-	{ "SETS", LexemType_SETS },
-	{ "ELEMENTS", LexemType_ELEMENTS },
-	{ "TUPLES", LexemType_TUPLES },
-	{ "AGGREGATES", LexemType_AGGREGATES },
-	{ "ACTIONS", LexemType_ACTIONS },
-
-	{ "TIMELINE", LexemType_TIMELINE },
-	{ "AS", LexemType_AS },
-	{ "UNTIL", LexemType_UNTIL },
-	{ "SEQUENCE", LexemType_SEQUENCE },
-
-	{ "IF", LexemType_IF },
-	{ "THEN", LexemType_THEN },
-	{ "ELSE", LexemType_ELSE },
-	{ "SWITCH", LexemType_SWITCH },
-	{ "DEFAULT", LexemType_DEFAULT },
-	{ "CASE", LexemType_CASE },
-	{ "OF", LexemType_OF },
-	{ "WHILE", LexemType_WHILE },
-
-	{ "SUBSTITUTE", LexemType_SUBSTITUTE },
-	{ "FOR", LexemType_FOR },
-	{ "WHEN", LexemType_WHEN },
-
-	{ "DOWNLOAD", LexemType_DOWNLOAD },
-	{ "FROM", LexemType_FROM },
-	{ "WITH", LexemType_WITH },
-	{ "UPLOAD", LexemType_UPLOAD },
-	{ "TO", LexemType_TO },
-
-	{ "RENDER", LexemType_RENDER },
-
-	{ "PRINT", LexemType_PRINT },
-
-	{ "AND", LexemType_AND },
-	{ "OR", LexemType_OR },
-	{ "XOR", LexemType_NOT },
-	{ "NOT", LexemType_XOR },
-
-	{ "IS", LexemType_ASSIGN },
-
-	{ "TRUE", LexemType_LOGIC },
-	{ "FALSE", LexemType_LOGIC },
-
-};
-
-int current_line_position = 0;
-
-
-
-inline static int LexemOperator(std::fstream *fs, Lexem *lexem_to_add)
-{
-
-	if (fs->peek() == '-')
-	{
-		lexem_to_add->SetBuffer("-");
-		lexem_to_add->SetType(LexemType_MINUS);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '+')
-	{
-		lexem_to_add->SetBuffer("+");
-		lexem_to_add->SetType(LexemType_PLUS);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '*')
-	{
-		lexem_to_add->SetBuffer("*");
-		lexem_to_add->SetType(LexemType_MULT);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '/')
-	{
-		fs->get();
-		if (fs->peek() == '/') {
-			std::string comment = "";
-			while (fs->peek() != '\n') {
-				comment += fs->get();;
-				lexem_to_add->SetBuffer(comment);
-				lexem_to_add->SetType(LexemType_COMMENT);
-				lexem_to_add->SetLine(current_line_position);
-			}
-			return 0;
+	struct comp {
+		bool operator() (const std::string &lhs, const std::string &rhs) const {
+			return _stricmp(lhs.c_str(), rhs.c_str()) < 0;
 		}
-		else {
-			lexem_to_add->SetBuffer("/");
-			lexem_to_add->SetType(LexemType_DIV);
-			lexem_to_add->SetLine(current_line_position);
-			return 0;
-		}
+	};
 
-	}
 
-	else if (fs->peek() == '%')
+	std::map <std::string, TokenType, comp> program_key_words = {
+
+		{ "PROGRAM", TokenType::PROGRAM },
+		{ "LIBRARIES", TokenType::LIBRARIES },
+		{ "HANDLERS", TokenType::HANDLERS },
+		{ "RENDERERS", TokenType::RENDERERS },
+		{ "SOURCES", TokenType::SOURCES },
+		{ "SETS", TokenType::SETS },
+		{ "ELEMENTS", TokenType::ELEMENTS },
+		{ "TUPLES", TokenType::TUPLES },
+		{ "AGGREGATES", TokenType::AGGREGATES },
+		{ "ACTIONS", TokenType::ACTIONS },
+
+		{ "TIMELINE", TokenType::TIMELINE },
+		{ "AS", TokenType::AS },
+		{ "UNTIL", TokenType::UNTIL },
+		{ "SEQUENCE", TokenType::SEQUENCE },
+
+		{ "IF", TokenType::IF },
+		{ "THEN", TokenType::THEN },
+		{ "ELSE", TokenType::ELSE },
+		{ "SWITCH", TokenType::SWITCH },
+		{ "DEFAULT", TokenType::DEFAULT },
+		{ "CASE", TokenType::CASE },
+		{ "OF", TokenType::OF },
+		{ "WHILE", TokenType::WHILE },
+
+		{ "SUBSTITUTE", TokenType::SUBSTITUTE },
+		{ "FOR", TokenType::FOR },
+		{ "WHEN", TokenType::WHEN },
+
+		{ "DOWNLOAD", TokenType::DOWNLOAD },
+		{ "FROM", TokenType::FROM },
+		{ "WITH", TokenType::WITH },
+		{ "UPLOAD", TokenType::UPLOAD },
+		{ "TO", TokenType::TO },
+
+		{ "RENDER", TokenType::RENDER },
+
+		{ "PRINT", TokenType::PRINT },
+
+		{ "AND", TokenType::AND },
+		{ "OR", TokenType::OR },
+		{ "XOR", TokenType::NOT },
+		{ "NOT", TokenType::XOR },
+
+		{ "IS", TokenType::ASSIGN },
+
+		{ "TRUE", TokenType::LOGIC },
+		{ "FALSE", TokenType::LOGIC },
+
+	};
+
+	int current_line_position = 0;
+
+
+
+	inline static int token_operator(std::fstream &fs, Token *token_to_add)
 	{
-		lexem_to_add->SetBuffer("%");
-		lexem_to_add->SetType(LexemType_MOD);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
 
-	else if (fs->peek() == '<')
-	{
-		fs->get();
-		if (fs->peek() == '=') {
-			lexem_to_add->SetBuffer("<=");
-			lexem_to_add->SetType(LexemType_LESS_OR_EQUAL);
-			lexem_to_add->SetLine(current_line_position);
-			fs->get();
-			return 0;
-		}
-		else {
-			lexem_to_add->SetBuffer("<");
-			lexem_to_add->SetType(LexemType_LESS);
-			lexem_to_add->SetLine(current_line_position);
-			return 0;
-		}
-	}
-
-	else if (fs->peek() == '>')
-	{
-		fs->get();
-		if (fs->peek() == '=') {
-			lexem_to_add->SetBuffer(">=");
-			lexem_to_add->SetType(LexemType_MORE_OR_EQUAL);
-			lexem_to_add->SetLine(current_line_position);
-			fs->get();
-			return 0;
-		}
-		else {
-			lexem_to_add->SetBuffer(">");
-			lexem_to_add->SetType(LexemType_MORE);
-			lexem_to_add->SetLine(current_line_position);
-			return 0;
-		}
-	}
-
-	else if (fs->peek() == '=')
-	{
-		fs->get();
-		if (fs->peek() == '=') {
-			lexem_to_add->SetBuffer("==");
-			lexem_to_add->SetType(LexemType_EQUAL);
-			lexem_to_add->SetLine(current_line_position);
-			fs->get();
-			return 0;
-		}
-		else {
-			lexem_to_add->SetBuffer("=");
-			lexem_to_add->SetType(LexemType_ASSIGN);
-			lexem_to_add->SetLine(current_line_position);
-			return 0;
-		}
-	}
-
-	else if (fs->peek() == '!')
-	{
-		fs->get();
-		if (fs->peek() == '=') {
-			lexem_to_add->SetBuffer("!=");
-			lexem_to_add->SetType(LexemType_NOTEQUAL);
-			lexem_to_add->SetLine(current_line_position);
-			fs->get();
-			return 0;
-		}
-		else {
-			lexem_to_add->SetBuffer("!");
-			lexem_to_add->SetType(LexemType_NOT);
-			lexem_to_add->SetLine(current_line_position);
-			return 0;
-		}
-	}
-
-	else if (fs->peek() == '?')
-	{
-		lexem_to_add->SetBuffer("?");
-		lexem_to_add->SetType(LexemTupe_QUESTION_MARK);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '^')
-	{
-		lexem_to_add->SetBuffer("^");
-		lexem_to_add->SetType(LexemType_CARET);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '&')
-	{
-		fs->get();
-		if (fs->peek() == '&') {
-			lexem_to_add->SetBuffer("&&");
-			lexem_to_add->SetType(LexemType_AND);
-			lexem_to_add->SetLine(current_line_position);
-			fs->get();
-			return 0;
-		}
-		else {
-			lexem_to_add->SetBuffer("&");
-			lexem_to_add->SetType(LexemType_AMPERSAND);
-			lexem_to_add->SetLine(current_line_position);
-			return 0;
-		}
-	}
-
-	else if (fs->peek() == '|')
-	{
-		fs->get();
-		if (fs->peek() == '|') {
-			lexem_to_add->SetBuffer("||");
-			lexem_to_add->SetType(LexemType_OR);
-			lexem_to_add->SetLine(current_line_position);
-			fs->get();
-			return 0;
-		}
-		else {
-			lexem_to_add->SetBuffer("|");
-			lexem_to_add->SetType(LexemType_VERTICAL_BAR);
-			lexem_to_add->SetLine(current_line_position);
-			return 0;
-		}
-	}
-
-	else if (fs->peek() == ':')
-	{
-		lexem_to_add->SetBuffer(":");
-		lexem_to_add->SetType(LexemType_COLON);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-	else if (fs->peek() == ';')
-	{
-		lexem_to_add->SetBuffer(";");
-		lexem_to_add->SetType(LexemType_SEMICOLON);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '.')
-	{
-		lexem_to_add->SetBuffer(".");
-		lexem_to_add->SetType(LexemType_POINT);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == ',')
-	{
-		lexem_to_add->SetBuffer(",");
-		lexem_to_add->SetType(LexemType_COMMA);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '#')
-	{
-		lexem_to_add->SetBuffer("#");
-		lexem_to_add->SetType(LexemType_NUMBER_SIGN);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-
-	}
-
-	else if (fs->peek() == '@')
-	{
-		lexem_to_add->SetBuffer("-");
-		lexem_to_add->SetType(LexemType_SOBAKA);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-
-	else if (fs->peek() == '(')
-	{
-		lexem_to_add->SetBuffer("(");
-		lexem_to_add->SetType(LexemType_LEFT_BRACKET);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-	else if (fs->peek() == ')')
-	{
-		lexem_to_add->SetBuffer(")");
-		lexem_to_add->SetType(LexemType_RIGHT_BRACKET);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-	else if (fs->peek() == '{')
-	{
-		lexem_to_add->SetBuffer("{");
-		lexem_to_add->SetType(LexemType_LEFT_BRACE);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-	else if (fs->peek() == '}')
-	{
-		lexem_to_add->SetBuffer("}");
-		lexem_to_add->SetType(LexemType_RIGHT_BRACE);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-	else if (fs->peek() == '[')
-	{
-		lexem_to_add->SetBuffer("[");
-		lexem_to_add->SetType(LexemType_LEFT_SQUARE_BRACKET);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-	else if (fs->peek() == ']')
-	{
-		lexem_to_add->SetBuffer("]");
-		lexem_to_add->SetType(LexemType_RIGHT_SQUARE_BRACKET);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return 0;
-	}
-	else if (fs->peek() == EOF)
-	{
-		return 1;
-	}
-
-	else
-	{
-		lexem_to_add->SetBuffer("ERROR");
-		lexem_to_add->SetType(LexemType_NOTHING);
-		lexem_to_add->SetLine(current_line_position);
-		fs->get();
-		return -1;
-	}
-}
-
-inline static int LexemStringLiteral(std::fstream *fs, Lexem *lexem_to_add) {
-
-	std::string buffer;
-
-	if (fs->peek() == '\'') {
-		fs->get();
-
-		while (fs->peek() != '\'') {
-			if (fs->peek() == '\n' || fs->peek() == EOF) break;
-
-			buffer += (char)fs->get();
-		}
-	}
-	else {
-		while (fs->peek() != '\"') {
-			if (fs->peek() == '\n' || fs->peek() == EOF) break;
-
-			buffer += (char)fs->get();
-		}
-	}
-
-	fs->get();
-
-	lexem_to_add->SetBuffer(buffer);
-	lexem_to_add->SetType(LexemType_STRING_LITERAL);
-	lexem_to_add->SetLine(current_line_position);
-	return 0;
-}
-
-// выделить лексему 'число'
-inline static int LexemDigit(std::fstream *fs, Lexem *lexem_to_add)
-{
-	std::string buffer;
-
-	buffer.clear();
-	//int n = 0;
-
-	int state = 0;
-
-	while (fs->peek() != EOF) {
-
-		switch (state)
+		if (fs.peek() == '-')
 		{
-		case 0:
+			token_to_add->set_buffer("-");
+			token_to_add->set_type(TokenType::MINUS);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
 
-			if (isdigit(fs->peek())) {
-				buffer += (char)fs->get();
-			}
-			else if (fs->peek() == '.') {
-				buffer += (char)fs->get();
-				state = 0;
-			}
-			else {
-				lexem_to_add->SetBuffer(buffer);
-				lexem_to_add->SetType(LexemType_NUMBER);
-				lexem_to_add->SetLine(current_line_position);
-				return 1;
-			}
-			break;
+		else if (fs.peek() == '+')
+		{
+			token_to_add->set_buffer("+");
+			token_to_add->set_type(TokenType::PLUS);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
 
-		case 1:
+		else if (fs.peek() == '*')
+		{
+			token_to_add->set_buffer("*");
+			token_to_add->set_type(TokenType::MULT);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
 
-			if (isdigit(fs->peek())) {
-				buffer += (char)fs->get();
-			}
-			else {
-				lexem_to_add->SetBuffer(buffer);
-				lexem_to_add->SetType(LexemType_NUMBER);
-				lexem_to_add->SetLine(current_line_position);
+		else if (fs.peek() == '/')
+		{
+			fs.get();
+			if (fs.peek() == '/') {
+				std::string comment = "";
+				while (fs.peek() != '\n') {
+					comment += fs.get();;
+					token_to_add->set_buffer(comment);
+					token_to_add->set_type(TokenType::COMMENT);
+					token_to_add->set_line(current_line_position);
+				}
 				return 0;
 			}
-			break;
+			else {
+				token_to_add->set_buffer("/");
+				token_to_add->set_type(TokenType::DIV);
+				token_to_add->set_line(current_line_position);
+				return 0;
+			}
+
 		}
-		
 
-	}
-
-	return 0;
-		
-}
-
-inline static int LexemName(std::fstream *fs, Lexem *lexem_to_add)
-{
-
-	std::string buffer;
-	//int n = 0;
-
-	while (fs->peek() != EOF) {
-		if (!IS_NAME(fs->peek())) {
-			break;
-		}
-		else {
-			buffer += (char)fs->get();
-		}
-	}
-
-	lexem_to_add->SetBuffer(buffer);
-	lexem_to_add->SetLine(current_line_position);
-
-	auto Lexem = program_key_words.find(buffer);
-
-	if (Lexem != program_key_words.end()) {
-		lexem_to_add->SetType(Lexem->second);
-	}
-	else {
-		lexem_to_add->SetType(LexemType_NAME);
-	}
-
-	return 0;	
-}
-
-
-//Ignore TAB, new lines, spaces
-inline static int  IgnoreTabNewlinesAndSpaces(std::fstream *fs) {
-
-	while (isspace(fs->peek()) || fs->peek() == '\n' || fs->peek() == '\t') {
-		if (fs->peek() == '\n') {
-			current_line_position++;
-		}
-		fs->get();
-	}
-	return 0;
-}
-
-
-int Lexer_splitTokens(std::fstream *fs, std::vector<Lexem>* lexem_sequence) {
-
-	if (fs == NULL) return 1;
-
-	while (fs->peek() != EOF) {
-
-		Lexem *lexem_to_add = new Lexem();
-
-		IgnoreTabNewlinesAndSpaces(fs);
-
-
-		if (IS_NAME_START(fs->peek()))
+		else if (fs.peek() == '%')
 		{
-			LexemName(fs, lexem_to_add);
+			token_to_add->set_buffer("%");
+			token_to_add->set_type(TokenType::MOD);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
 		}
 
-		else if (isdigit(fs->peek()))
+		else if (fs.peek() == '<')
 		{
-			LexemDigit(fs, lexem_to_add);
+			fs.get();
+			if (fs.peek() == '=') {
+				token_to_add->set_buffer("<=");
+				token_to_add->set_type(TokenType::LESS_OR_EQUAL);
+				token_to_add->set_line(current_line_position);
+				fs.get();
+				return 0;
+			}
+			else {
+				token_to_add->set_buffer("<");
+				token_to_add->set_type(TokenType::LESS);
+				token_to_add->set_line(current_line_position);
+				return 0;
+			}
 		}
 
-		else if (IS_STRING_LITERAL_START(fs->peek()))
+		else if (fs.peek() == '>')
 		{
-			LexemStringLiteral(fs, lexem_to_add);
+			fs.get();
+			if (fs.peek() == '=') {
+				token_to_add->set_buffer(">=");
+				token_to_add->set_type(TokenType::MORE_OR_EQUAL);
+				token_to_add->set_line(current_line_position);
+				fs.get();
+				return 0;
+			}
+			else {
+				token_to_add->set_buffer(">");
+				token_to_add->set_type(TokenType::MORE);
+				token_to_add->set_line(current_line_position);
+				return 0;
+			}
 		}
 
-		else {
-			LexemOperator(fs, lexem_to_add);
+		else if (fs.peek() == '=')
+		{
+			fs.get();
+			if (fs.peek() == '=') {
+				token_to_add->set_buffer("==");
+				token_to_add->set_type(TokenType::EQUAL);
+				token_to_add->set_line(current_line_position);
+				fs.get();
+				return 0;
+			}
+			else {
+				token_to_add->set_buffer("=");
+				token_to_add->set_type(TokenType::ASSIGN);
+				token_to_add->set_line(current_line_position);
+				return 0;
+			}
 		}
 
-		if (lexem_to_add->GetType() == LexemType_NOTHING) {
+		else if (fs.peek() == '!')
+		{
+			fs.get();
+			if (fs.peek() == '=') {
+				token_to_add->set_buffer("!=");
+				token_to_add->set_type(TokenType::NOTEQUAL);
+				token_to_add->set_line(current_line_position);
+				fs.get();
+				return 0;
+			}
+			else {
+				token_to_add->set_buffer("!");
+				token_to_add->set_type(TokenType::NOT);
+				token_to_add->set_line(current_line_position);
+				return 0;
+			}
+		}
+
+		else if (fs.peek() == '?')
+		{
+			token_to_add->set_buffer("?");
+			token_to_add->set_type(TokenType::QUESTION_MARK);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+
+		else if (fs.peek() == '^')
+		{
+			token_to_add->set_buffer("^");
+			token_to_add->set_type(TokenType::CARET);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+
+		else if (fs.peek() == '&')
+		{
+			fs.get();
+			if (fs.peek() == '&') {
+				token_to_add->set_buffer("&&");
+				token_to_add->set_type(TokenType::AND);
+				token_to_add->set_line(current_line_position);
+				fs.get();
+				return 0;
+			}
+			else {
+				token_to_add->set_buffer("&");
+				token_to_add->set_type(TokenType::AMPERSAND);
+				token_to_add->set_line(current_line_position);
+				return 0;
+			}
+		}
+
+		else if (fs.peek() == '|')
+		{
+			fs.get();
+			if (fs.peek() == '|') {
+				token_to_add->set_buffer("||");
+				token_to_add->set_type(TokenType::OR);
+				token_to_add->set_line(current_line_position);
+				fs.get();
+				return 0;
+			}
+			else {
+				token_to_add->set_buffer("|");
+				token_to_add->set_type(TokenType::VERTICAL_BAR);
+				token_to_add->set_line(current_line_position);
+				return 0;
+			}
+		}
+
+		else if (fs.peek() == ':')
+		{
+			token_to_add->set_buffer(":");
+			token_to_add->set_type(TokenType::COLON);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+		else if (fs.peek() == ';')
+		{
+			token_to_add->set_buffer(";");
+			token_to_add->set_type(TokenType::SEMICOLON);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+
+		else if (fs.peek() == '.')
+		{
+			token_to_add->set_buffer(".");
+			token_to_add->set_type(TokenType::POINT);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+
+		else if (fs.peek() == ',')
+		{
+			token_to_add->set_buffer(",");
+			token_to_add->set_type(TokenType::COMMA);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+
+		else if (fs.peek() == '#')
+		{
+			token_to_add->set_buffer("#");
+			token_to_add->set_type(TokenType::NUMBER_SIGN);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+
+		}
+
+		else if (fs.peek() == '@')
+		{
+			token_to_add->set_buffer("-");
+			token_to_add->set_type(TokenType::SOBAKA);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+
+		else if (fs.peek() == '(')
+		{
+			token_to_add->set_buffer("(");
+			token_to_add->set_type(TokenType::LEFT_BRACKET);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+		else if (fs.peek() == ')')
+		{
+			token_to_add->set_buffer(")");
+			token_to_add->set_type(TokenType::RIGHT_BRACKET);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+		else if (fs.peek() == '{')
+		{
+			token_to_add->set_buffer("{");
+			token_to_add->set_type(TokenType::LEFT_BRACE);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+		else if (fs.peek() == '}')
+		{
+			token_to_add->set_buffer("}");
+			token_to_add->set_type(TokenType::RIGHT_BRACE);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+		else if (fs.peek() == '[')
+		{
+			token_to_add->set_buffer("[");
+			token_to_add->set_type(TokenType::LEFT_SQUARE_BRACKET);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+		else if (fs.peek() == ']')
+		{
+			token_to_add->set_buffer("]");
+			token_to_add->set_type(TokenType::RIGHT_SQUARE_BRACKET);
+			token_to_add->set_line(current_line_position);
+			fs.get();
+			return 0;
+		}
+		else if (fs.peek() == EOF)
+		{
+			return 1;
+		}
+
+		else
+		{
+			token_to_add->set_buffer("ERROR");
+			token_to_add->set_type(TokenType::NOTHING);
+			token_to_add->set_line(current_line_position);
+			fs.get();
 			return -1;
 		}
-		
-		lexem_sequence->push_back(*lexem_to_add);
-
 	}
-	return 0;
 
-}
+	inline static int token_string_literal(std::fstream &fs, Token *token_to_add) {
 
-void LexemPrint(std::vector<Lexem>* lexem_sequence)
-{
+		std::string buffer;
 
-	std::for_each(lexem_sequence->begin(),
-		lexem_sequence->end(),
-		[&](Lexem lexem) {
+		if (fs.peek() == '\'') {
+			fs.get();
 
-		std::cout << " Lexem: " << lexem.GetBuffer() << "	Value: " << LexemType_toString(lexem.GetType()) << std::endl;
+			while (fs.peek() != '\'') {
+				if (fs.peek() == '\n' || fs.peek() == EOF) break;
+
+				buffer += (char)fs.get();
+			}
+		}
+		else {
+			while (fs.peek() != '\"') {
+				if (fs.peek() == '\n' || fs.peek() == EOF) break;
+
+				buffer += (char)fs.get();
+			}
+		}
+
+		fs.get();
+
+		token_to_add->set_buffer(buffer);
+		token_to_add->set_type(TokenType::STRING_LITERAL);
+		token_to_add->set_line(current_line_position);
+		return 0;
+	}
+
+	// выделить лексему 'число'
+	inline static int token_digit(std::fstream &fs, Token *token_to_add)
+	{
+		std::string buffer;
+
+		buffer.clear();
+		//int n = 0;
+
+		int state = 0;
+
+		while (fs.peek() != EOF) {
+
+			switch (state)
+			{
+			case 0:
+
+				if (isdigit(fs.peek())) {
+					buffer += (char)fs.get();
+				}
+				else if (fs.peek() == '.') {
+					buffer += (char)fs.get();
+					state = 0;
+				}
+				else {
+					token_to_add->set_buffer(buffer);
+					token_to_add->set_type(TokenType::NUMBER);
+					token_to_add->set_line(current_line_position);
+					return 1;
+				}
+				break;
+
+			case 1:
+
+				if (isdigit(fs.peek())) {
+					buffer += (char)fs.get();
+				}
+				else {
+					token_to_add->set_buffer(buffer);
+					token_to_add->set_type(TokenType::NUMBER);
+					token_to_add->set_line(current_line_position);
+					return 0;
+				}
+				break;
+			}
+
 
 		}
-	);
-}
 
- std::string LexemType_toString(LexemType type) {
-	switch (type) {
-		//Base_Symbols
-	case LexemType_INTEGER: return "LexemType_INTEGER";
-	case	LexemType_REAL: return "LexemType_REAL";
-	case LexemType_NUMBER: return "LexemType_NUMBER";
-	
+		return 0;
 
-		case		LexemType_STRING_LITERAL: return "LexemType_STRING_LITERAL";
-		case		LexemType_NAME: return "LexemType_NAME";
+	}
+
+	inline static int token_name(std::fstream &fs, Token *token_to_add)
+	{
+
+		std::string buffer;
+		//int n = 0;
+
+		while (fs.peek() != EOF) {
+			if (!IS_NAME(fs.peek())) {
+				break;
+			}
+			else {
+				buffer += (char)fs.get();
+			}
+		}
+
+		token_to_add->set_buffer(buffer);
+		token_to_add->set_line(current_line_position);
+
+		auto Lexem = program_key_words.find(buffer);
+
+		if (Lexem != program_key_words.end()) {
+			token_to_add->set_type(Lexem->second);
+		}
+		else {
+			token_to_add->set_type(TokenType::NAME);
+		}
+
+		return 0;
+	}
+
+
+	//Ignore TAB, new lines, spaces
+	inline static int skip_spaces(std::fstream &fs) {
+
+		while (isspace(fs.peek()) || fs.peek() == '\n' || fs.peek() == '\t') {
+			if (fs.peek() == '\n') {
+				current_line_position++;
+			}
+			fs.get();
+		}
+		return 0;
+	}
+
+
+	int split_tokens(std::fstream &fs, std::vector<Token> &token_sequence) {
+
+		if (!fs.is_open()) return 1;
+
+		skip_spaces(fs);
+		while (fs.peek() != EOF) {
+
+			Token *token_to_add = new Token();
+
+			if (IS_NAME_START(fs.peek())) {
+				token_name(fs, token_to_add);
+			} else if (isdigit(fs.peek())) {
+				token_digit(fs, token_to_add);
+			} else if (IS_STRING_LITERAL_START(fs.peek())) {
+				token_string_literal(fs, token_to_add);
+			} else {
+				token_operator(fs, token_to_add);
+			}
+
+			if (token_to_add->get_type() == TokenType::NOTHING) {
+				return -1;
+			}
+
+			token_sequence.push_back(*token_to_add);
+			skip_spaces(fs);
+		}
+		return 0;
+
+	}
+
+	void token_print(std::vector<Token> &token_sequence)
+	{
+
+		std::for_each(token_sequence.begin(), token_sequence.end(),
+			[&](Token token) {
+				std::cout << " Lexem: " << token.get_buffer() << "	Value: " << to_string(token.get_type()) << std::endl;
+			}
+		);
+	}
+
+	std::string to_string(TokenType type) {
+		switch (type) {
+			//Base_Symbols
+		case TokenType::INTEGER: return "INTEGER";
+		case TokenType::REAL: return "REAL";
+		case TokenType::NUMBER: return "NUMBER";
+
+
+		case TokenType::STRING_LITERAL: return "STRING_LITERAL";
+		case TokenType::NAME: return "NAME";
 
 			//True/False
-		case	LexemType_LOGIC: return "LexemType_LOGIC"; //BOOLEAN
+		case TokenType::LOGIC: return "LOGIC"; //BOOLEAN
 
 			//Math_Operators
-		case	LexemType_PLUS: return "LexemType_PLUS";
-		case	LexemType_MINUS: return "LexemType_MINUS";
-		case	LexemType_MULT: return "LexemType_MULT";
-		case	LexemType_DIV: return "LexemType_DIV";
+		case TokenType::PLUS: return "PLUS";
+		case TokenType::MINUS: return "MINUS";
+		case TokenType::MULT: return "MULT";
+		case TokenType::DIV: return "DIV";
 
-		case	LexemType_MOD: return "LexemType_MOD"; //May be
+		case TokenType::MOD: return "MOD"; //May be
 
-		case	LexemType_CARET: return "LexemType_CARET";
+		case TokenType::CARET: return "CARET";
 
 			//Logical_Operators
-		case	LexemType_AND: return "LexemType_AND";
-		case	LexemType_OR: return "LexemType_OR";
-		case	LexemType_NOT: return "LexemType_NOT";
-		case	LexemType_XOR: return "LexemType_XOR";
+		case TokenType::AND: return "AND";
+		case TokenType::OR: return "OR";
+		case TokenType::NOT: return "NOT";
+		case TokenType::XOR: return "XOR";
 
-		case	LexemType_EQUAL: return "LexemType_EQUAL";
-		case	LexemType_NOTEQUAL: return "LexemType_NOTEQUAL";
+		case TokenType::EQUAL: return "EQUAL";
+		case TokenType::NOTEQUAL: return "NOTEQUAL";
 
-		case	LexemType_MORE: return "LexemType_MORE";
-		case	LexemType_LESS: return "LexemType_LESS";
+		case TokenType::MORE: return "MORE";
+		case TokenType::LESS: return "LESS";
 
-		case	LexemType_LESS_OR_EQUAL: return "LexemType_LESS_OR_EQUAL";
-		case	LexemType_MORE_OR_EQUAL: return "LexemType_MORE_OR_EQUAL";
+		case TokenType::LESS_OR_EQUAL: return "LESS_OR_EQUAL";
+		case TokenType::MORE_OR_EQUAL: return "MORE_OR_EQUAL";
 
 			//Assign
-		case	LexemType_ASSIGN: return "LexemType_ASSIGN"; //("=" or "IS")
+		case TokenType::ASSIGN: return "ASSIGN"; //("=" or "IS")
 
 			//Symbols
-		case	LexemType_POINT: return "LexemType_POINT";
-		case	LexemType_COMMA: return "LexemType_COMMA";
-		case	LexemType_SEMICOLON: return "LexemType_SEMICOLON";
-		case	LexemType_COLON: return "LexemType_COLON";
-		case	LexemTupe_QUESTION_MARK: return "LexemTupe_QUESTION_MARK";
-		case	LexemType_EXCLAMATION_MARK: return "LexemType_EXCLAMATION_MARK";
+		case TokenType::POINT: return "POINT";
+		case TokenType::COMMA: return "COMMA";
+		case TokenType::SEMICOLON: return "SEMICOLON";
+		case TokenType::COLON: return "COLON";
+		case TokenType::QUESTION_MARK: return "QUESTION_MARK";
+		case TokenType::EXCLAMATION_MARK: return "EXCLAMATION_MARK";
 
-		case	LexemType_LEFT_BRACKET: return "LexemType_LEFT_BRACKET";//"("
-		case	LexemType_RIGHT_BRACKET: return "LexemType_RIGHT_BRACKET";//")"
-		case	LexemType_LEFT_BRACE: return "LexemType_LEFT_BRACE"; //"{"
-		case	LexemType_RIGHT_BRACE: return "LexemType_RIGHT_BRACE";//"}"
-		case	LexemType_LEFT_SQUARE_BRACKET: return "LexemType_LEFT_SQUARE_BRACKET";//"["
-		case	LexemType_RIGHT_SQUARE_BRACKET: return "LexemType_RIGHT_SQUARE_BRACKET";//"]"
+		case TokenType::LEFT_BRACKET: return "LEFT_BRACKET";//"("
+		case TokenType::RIGHT_BRACKET: return "RIGHT_BRACKET";//")"
+		case TokenType::LEFT_BRACE: return "LEFT_BRACE"; //"{"
+		case TokenType::RIGHT_BRACE: return "RIGHT_BRACE";//"}"
+		case TokenType::LEFT_SQUARE_BRACKET: return "LEFT_SQUARE_BRACKET";//"["
+		case TokenType::RIGHT_SQUARE_BRACKET: return "RIGHT_SQUARE_BRACKET";//"]"
 
-		case	LexemType_APOSTROPHE: return "LexemType_APOSTROPHE";
-		case	LexemType_QUOTES: return "LexemType_QUOTES"; // "
-		case	LexemType_SLASH: return "LexemType_SLASH"; // "/"
-		case	LexemType_BACKSLASH: return "LexemType_BACKSLASH"; // "\"
-		case	LexemType_NUMBER_SIGN: return "LexemType_NUMBER_SIGN"; // "#"
-		case	LexemType_SOBAKA: return "LexemType_SOBAKA"; //"@"
+		case TokenType::APOSTROPHE: return "APOSTROPHE";
+		case TokenType::QUOTES: return "QUOTES"; // "
+		case TokenType::SLASH: return "SLASH"; // "/"
+		case TokenType::BACKSLASH: return "BACKSLASH"; // "\"
+		case TokenType::NUMBER_SIGN: return "NUMBER_SIGN"; // "#"
+		case TokenType::SOBAKA: return "SOBAKA"; //"@"
 
-		case	LexemType_AMPERSAND: return "LexemType_AMPERSAND";
-		case	LexemType_VERTICAL_BAR: return "LexemType_VERTICAL_BAR";
+		case TokenType::AMPERSAND: return "AMPERSAND";
+		case TokenType::VERTICAL_BAR: return "VERTICAL_BAR";
 
 			//Program key words
-		case	LexemType_PROGRAM: return "LexemType_PROGRAM";
-		case	LexemType_LIBRARIES: return "LexemType_LIBRARIES";
-		case	LexemType_HANDLERS: return "LexemType_HANDLERS";
-		case	LexemType_RENDERERS: return "LexemType_RENDERERS";
-		case	LexemType_SOURCES: return "LexemType_SOURCES";
-		case	LexemType_SETS: return "LexemType_SETS";
-		case	LexemType_ELEMENTS: return "LexemType_ELEMENTS";
-		case	LexemType_TUPLES: return "LexemType_TUPLES";
-		case	LexemType_AGGREGATES: return "LexemType_AGGREGATES";
-		case	LexemType_ACTIONS: return "LexemType_ACTIONS";
+		case TokenType::PROGRAM: return "PROGRAM";
+		case TokenType::LIBRARIES: return "LIBRARIES";
+		case TokenType::HANDLERS: return "HANDLERS";
+		case TokenType::RENDERERS: return "RENDERERS";
+		case TokenType::SOURCES: return "SOURCES";
+		case TokenType::SETS: return "SETS";
+		case TokenType::ELEMENTS: return "ELEMENTS";
+		case TokenType::TUPLES: return "TUPLES";
+		case TokenType::AGGREGATES: return "AGGREGATES";
+		case TokenType::ACTIONS: return "ACTIONS";
 
 			//Special key words for
 
 			//Timeline operator
-		case	LexemType_TIMELINE: return "LexemType_TIMELINE";
-		case	LexemType_AS: return "LexemType_AS";
-		case	LexemType_UNTIL: return "LexemType_UNTIL";
+		case TokenType::TIMELINE: return "TIMELINE";
+		case TokenType::AS: return "AS";
+		case TokenType::UNTIL: return "UNTIL";
 			//Sequence handler operator
-		case	LexemType_SEQUENCE: return "LexemType_SEQUENCE";
+		case TokenType::SEQUENCE: return "SEQUENCE";
 
 			//IF/Case
-		case	LexemType_IF: return "LexemType_IF";
-		case	LexemType_THEN: return "LexemType_THEN";
-		case	LexemType_ELSE: return "LexemType_ELSE";
-		case	LexemType_CASE: return "LexemType_CASE";
-		case	LexemType_OF: return "LexemType_OF";
+		case TokenType::IF: return "IF";
+		case TokenType::THEN: return "THEN";
+		case TokenType::ELSE: return "ELSE";
+		case TokenType::CASE: return "CASE";
+		case TokenType::OF: return "OF";
 
 			//SUBSTITUTE operator
-		case	LexemType_SUBSTITUTE: return "LexemType_SUBSTITUTE";
-		case	LexemType_FOR: return "LexemType_FOR";
-		case	LexemType_WHEN: return "LexemType_WHEN";
+		case TokenType::SUBSTITUTE: return "SUBSTITUTE";
+		case TokenType::FOR: return "FOR";
+		case TokenType::WHEN: return "WHEN";
 
 			//Download/Render operator
-		case	LexemType_DOWNLOAD: return "LexemType_DOWNLOAD";
-		case	LexemType_FROM: return "LexemType_FROM";
-		case	LexemType_WITH: return "LexemType_WITH";
-		case	LexemType_UPLOAD: return "LexemType_UPLOAD";
-		case	LexemType_TO: return "LexemType_TO";
+		case TokenType::DOWNLOAD: return "DOWNLOAD";
+		case TokenType::FROM: return "FROM";
+		case TokenType::WITH: return "WITH";
+		case TokenType::UPLOAD: return "UPLOAD";
+		case TokenType::TO: return "TO";
 
-			case	LexemType_RENDER: return "LexemType_RENDER";
+		case TokenType::RENDER: return "RENDER";
 			//TokenType_WITH,
 
-			case	LexemType_COMMENT: return "LexemType_COMMENT";
+		case TokenType::COMMENT: return "COMMENT";
 
-			case	LexemType_NOTHING: return "LexemType_NOTHING";
-	default:                             return "";
+		case TokenType::NOTHING: return "NOTHING";
+		default: return "";
+		}
 	}
-}
 
-	
+}
