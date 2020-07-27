@@ -414,7 +414,7 @@ namespace Lexer {
 		return 0;
 	}
 
-	// РІС‹РґРµР»РёС‚СЊ Р»РµРєСЃРµРјСѓ 'С‡РёСЃР»Рѕ'
+	// выделить лексему 'число'
 	inline static int token_digit(std::fstream &fs, Token *token_to_add)
 	{
 		std::string buffer;
