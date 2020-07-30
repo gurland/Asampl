@@ -542,7 +542,7 @@ namespace Lexer {
 
 	void token_print(std::vector<Token> &token_sequence)
 	{
-		for (const auto& token : token_sequence) {
+		for (const auto &token : token_sequence) {
 			std::string str = "\t\tValue: ";
 			if ((token.get_buffer().length() <= 8)) {
 				str = "\t\t\tValue: ";

@@ -49,10 +49,12 @@ int main(int argc, char *argv[])
 
 	tree->print(std::cout);
 
-	//execute(tree);
+	Program program;
+	program.execute(tree);
 
-	Tree::free(tree);
+	//Tree::free(tree);
 	return 0;
+	
 }
 
 // Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
