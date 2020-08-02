@@ -19,7 +19,14 @@ namespace Lexer {
 
 	struct comp {
 		bool operator() (const std::string &lhs, const std::string &rhs) const {
-			return _stricmp(lhs.c_str(), rhs.c_str()) < 0;
+            if (lhs.size() != rhs.size()) {
+                return false;
+            }
+
+            return std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+                    [](char c1, char c2) {
+                        return std::tolower(c1) == std::tolower(c2);
+                    });
 		}
 	};
 
