@@ -1173,6 +1173,7 @@ static Tree *arr_ini(Parser *parser) {
 	Tree *argListNode = arg_list(parser);
 	expect(parser, TokenType::RIGHT_BRACE);
 }
+
 static AstNodeType tokenType_to_astType(TokenType type) {
 	switch (type)
 	{

@@ -50,7 +50,7 @@ public:
 		}
 	}
 
-	template<typename = std::enable_if_t<std::is_object<T>>>
+	template<typename = std::enable_if_t<std::is_object_v<T>>>
 	T &get_data() {
 		return data_;
 	}
@@ -72,7 +72,7 @@ public:
 		if (variables_.find(id) == variables_.end()) {
 			throw std::exception("Variabl with such id does not exist");
 		}
-		return dynamic_cast<Value<T>>(variables_[id]);
+		return dynamic_cast<Value<T>>(variables_.at(id));
 	}
 	catch (std::exception e) {
 		error_ = e.what();

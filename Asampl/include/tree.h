@@ -2,8 +2,10 @@
 #include <vector>
 #include <algorithm>
 
+#include <memory>
 #include <iostream>
 #include <string>
+#include <type_traits>
 
 enum class AstNodeType {
 	UNKNOWN,
@@ -119,8 +121,31 @@ public:
 	void add_child(children_t::const_iterator it, Tree *child) {
 		children_.emplace(it, child);
 	}
-	
+
+    template< typename M, typename... Ms >
+    bool match(M&& node_matcher, Ms&&... child_matchers) const;
+
+    template< typename... Ms >
+    bool match_children(Ms&&... child_matchers) const;
+
 private:
 	children_t children_;
 	std::unique_ptr<AstNode> node_;
 };
+
+#include "matcher.h"
+
+template< typename M, typename... Ms >
+bool Tree::match(M&& node_matcher, Ms&&... child_matchers) const {
+    if (!Matcher::match_one(*node_, std::forward<M>(node_matcher))) {
+        return false;
+    }
+    return Matcher::match_impl(children_, 0, std::forward<Ms>(child_matchers)...);
+}
+
+template< typename... Ms >
+bool Tree::match_children(Ms&&... child_matchers) const {
+    return Matcher::match_impl(children_, 0, std::forward<Ms>(child_matchers)...);
+}
+
+#include "matcher_impl.h"
