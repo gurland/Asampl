@@ -404,7 +404,7 @@ static Tree *item_import(Parser *parser) {
 		return nullptr;
 	}
 
-	Tree *itemImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "itemImport"));
+	Tree *itemImport = new Tree(new AstNode(AstNodeType::ITEM_IMPORT, "itemImport"));
 	itemImport->add_child(nameNode);
 	itemImport->add_child(dataNode);
 	return itemImport;
@@ -480,7 +480,7 @@ static Tree *element_declaration(Parser *parser) {
 		return nullptr;
 	}
 
-	Tree *elementImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "elementImport"));
+	Tree *elementImport = new Tree(new AstNode(AstNodeType::ELEMENT_IMPORT, "elementImport"));
 	elementImport->add_child(nameNode);
 	elementImport->add_child(dataNode);
 	return elementImport;

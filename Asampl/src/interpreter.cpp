@@ -3,13 +3,17 @@
 #include "matcher.h"
 
 
-int Program::execute(const Tree* ast_tree) {
+
+static bool is_value(AstNodeType t);
+
+int Program::execute(const Tree *ast_tree) {
 	auto ast_node = ast_tree->get_node();
 	assert(ast_node->type_ == AstNodeType::PROGRAM);
 
 	for (const auto& child : ast_tree->get_children()) {
 		if (!error_.empty()) {
 			//todo
+			return EXIT_FAILURE;
 		}
 		const auto child_node = child->get_node();
 		switch (child_node->type_) {
@@ -59,38 +63,59 @@ int Program::execute(const Tree* ast_tree) {
 	return EXIT_SUCCESS;
 }
 
-void Program::execute_library_import(const Tree* ast_tree) {
+void Program::execute_library_import(const Tree *ast_tree) {
 
 }
 
-void Program::execute_handler_import(const Tree* ast_tree) {
+void Program::execute_handler_import(const Tree *ast_tree) {
 
 }
 
-void Program::execute_renderer_declaration(const Tree* ast_tree) {
+void Program::execute_renderer_declaration(const Tree *ast_tree) {
 
 }
 
-void Program::execute_source_declaration(const Tree* ast_tree) {
+void Program::execute_source_declaration(const Tree *ast_tree) {
 
 }
 
-void Program::execute_set_declaration(const Tree* ast_tree) {
+void Program::execute_set_declaration(const Tree *ast_tree) {
 
 }
 
-void Program::execute_element_declaration(const Tree* ast_tree) {
+void Program::execute_element_declaration(const Tree *ast_tree) {
+	for (auto child : ast_tree->get_children()) {
+
+		child->match(
+			AstNodeType::ELEMENT_IMPORT,
+			AstNodeType::ID,
+			is_value
+		);
+		
+		auto children = child->get_children();
+		auto id_node = children[0]->get_node();
+		auto data_node = children[1]->get_node();
+
+		add_variable(id_node->value_, data_node);
+	}
+}
+
+void Program::execute_tuple_declaration(const Tree *ast_tree) {
 
 }
 
-void Program::execute_tuple_declaration(const Tree* ast_tree) {
+void Program::execute_aggregate_declaration(const Tree *ast_tree) {
 
 }
 
-void Program::execute_aggregate_declaration(const Tree* ast_tree) {
+void Program::execute_actions(const Tree *ast_tree) {
 
 }
 
-void Program::execute_actions(const Tree* ast_tree) {
 
+static bool is_value(AstNodeType t) {
+	return
+		t == AstNodeType::NUMBER ||
+		t == AstNodeType::STRING ||
+		t == AstNodeType::BOOL;
 }

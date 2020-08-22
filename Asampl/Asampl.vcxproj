@@ -160,6 +160,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\ast.h" />
     <ClInclude Include="include\interpreter.h" />
     <ClInclude Include="include\lexer.h" />
     <ClInclude Include="include\parser.h" />
