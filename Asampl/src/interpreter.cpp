@@ -68,7 +68,20 @@ void Program::execute_library_import(const Tree *ast_tree) {
 }
 
 void Program::execute_handler_import(const Tree *ast_tree) {
+    for (auto child : ast_tree->get_children()) {
+		const bool matches = child->match(
+			AstNodeType::ELEMENT_IMPORT,
+			AstNodeType::ID,
+			is_value
+		);
+        assert(matches);
 
+        const auto children = child->get_children();
+        const auto id_node = children[0]->get_node();
+        const auto data_node = children[1]->get_node();
+
+        handlers_[id_node->value_] = std::make_unique<Handler>(data_node->value_);
+    }
 }
 
 void Program::execute_renderer_declaration(const Tree *ast_tree) {
@@ -86,17 +99,18 @@ void Program::execute_set_declaration(const Tree *ast_tree) {
 void Program::execute_element_declaration(const Tree *ast_tree) {
 	for (auto child : ast_tree->get_children()) {
 
-		child->match(
+		const bool matches = child->match(
 			AstNodeType::ELEMENT_IMPORT,
 			AstNodeType::ID,
 			is_value
 		);
+        assert(matches);
 		
-		auto children = child->get_children();
-		auto id_node = children[0]->get_node();
-		auto data_node = children[1]->get_node();
+        const auto children = child->get_children();
+        const auto id_node = children[0]->get_node();
+        const auto data_node = children[1]->get_node();
 
-		add_variable(id_node->value_, data_node);
+        add_variable(id_node->value_, data_node);
 	}
 }
 

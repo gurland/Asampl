@@ -9,6 +9,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "tree.h"
+#include "handler.h"
 
 enum class ValueType {
 	NUMBER,
@@ -71,7 +72,7 @@ public:
 		return dynamic_cast<Value<T>>(variables_.at(id));
 	}
 
-	void add_variable(const std::string& id, const AstNode const *data_node);
+	void add_variable(const std::string& id, const AstNode *data_node);
 
 	int execute(const Tree *ast_tree);
 private:
@@ -92,11 +93,12 @@ private:
 	std::string error_;
 
 	std::unordered_map<std::string, std::unique_ptr<AbstractValue>> variables_;
+    std::unordered_map<std::string, std::unique_ptr<Handler>> handlers_;
 
 	std::unordered_map<std::string, std::type_index> types_;
 };
 
-void Program::add_variable(const std::string& id, const AstNode const* data_node) {
+void Program::add_variable(const std::string& id, const AstNode *data_node) {
 	std::unique_ptr<AbstractValue> abs_val;
 	switch (data_node->type_) {
 	case AstNodeType::NUMBER:
