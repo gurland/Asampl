@@ -98,7 +98,7 @@ private:
 	std::unordered_map<std::string, std::type_index> types_;
 };
 
-void Program::add_variable(const std::string& id, const AstNode *data_node) {
+inline void Program::add_variable(const std::string& id, const AstNode *data_node) {
 	std::unique_ptr<AbstractValue> abs_val;
 	switch (data_node->type_) {
 	case AstNodeType::NUMBER:
