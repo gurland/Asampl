@@ -1,0 +1,3 @@
+[submodule "Asampl/deps/dynalo"]
+	path = Asampl/deps/dynalo
+	url = https://github.com/maddouri/dynalo
