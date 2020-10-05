@@ -21,7 +21,8 @@ void load_function(dynalo::library& lib, std::function<T>& func, const char* nam
 Handler::Handler(const std::string& path) 
     : library_(to_native_name(path))
 {
-    load_function(library_, open, "asa_handler_open");
+    load_function(library_, open_download, "asa_handler_open_download");
+    load_function(library_, open_upload, "asa_handler_open_upload");
     load_function(library_, close, "asa_handler_close");
     load_function(library_, push, "asa_handler_push");
     load_function(library_, get_type, "asa_handler_get_type");
