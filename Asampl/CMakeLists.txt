@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2)
 
 project(asampl)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -Wno-sign-compare")
 
 if(UNIX)
@@ -13,4 +13,11 @@ else()
     find_package(OPENCV REQUIRED NAMES OpenCV)
 endif()
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/src)
+add_subdirectory(deps/dynalo)
+
+add_subdirectory(src)
+
+# executable
+add_executable(asampl Asampl.cpp)
+
+target_link_libraries(asampl asampl-lib)
