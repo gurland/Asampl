@@ -8,6 +8,8 @@
 #include <fstream>
 #include <functional>
 
+#define arraysize(x) sizeof(x)/sizeof(x[0])
+
 using namespace Lexer;
 
 static Tree *accept(Parser *parser, TokenType token);
@@ -524,7 +526,7 @@ static Tree *action(Parser *parser) {
 			print_action
 	};
 
-	return ebnf_one_of(parser, rules, size(rules));
+	return ebnf_one_of(parser, rules, arraysize(rules));
 }
 
 static Tree *block_actions(Parser *parser) {
@@ -888,7 +890,7 @@ static Tree *timeline_overload(Parser *parser) {
 			timeline_as,
 			timeline_until
 	};
-	return ebnf_one_of(parser, rules, size(rules));
+	return ebnf_one_of(parser, rules, arraysize(rules));
 }
 
 static Tree *timeline_expr(Parser *parser) {
@@ -1105,7 +1107,7 @@ static Tree *primary(Parser *parser) {
 		var_or_call,
 		parentheses
 	};
-	return ebnf_one_of(parser, rules, size(rules));
+	return ebnf_one_of(parser, rules, arraysize(rules));
 }
 
 static Tree *var_or_call(Parser *parser) {
@@ -1165,7 +1167,7 @@ static Tree *data(Parser *parser) {
 		expr,
 		arr_ini,
 	};
-	return ebnf_one_of(parser, rules, size(rules));
+	return ebnf_one_of(parser, rules, arraysize(rules));
 }
 
 static Tree *arr_ini(Parser *parser) {
