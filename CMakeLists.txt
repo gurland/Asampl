@@ -15,6 +15,9 @@ endif()
 
 add_subdirectory(deps/dynalo)
 
+add_library(asampl-interface INTERFACE)
+target_include_directories(asampl-interface INTERFACE include)
+
 add_subdirectory(src)
 
 # executable
