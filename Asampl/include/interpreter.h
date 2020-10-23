@@ -1,164 +1,118 @@
 #pragma once
-#include "tree.h"
-#include <vector>
+
+#include <type_traits>
+#include <unordered_map>
 #include <string>
-#include <iostream>
-#include <fstream>
-#include <map>
+#include <typeindex>
+#include <typeinfo>
+
 #include <opencv2/opencv.hpp>
-#include <algorithm>  
 
+#include "tree.h"
+#include "handler.h"
 
-typedef enum {
-	ValueType_NUMBER,
-	ValueType_BOOL,
-	ValueType_STRING,
-	ValueType_UNDEFIND,
-	ValueType_VIDEO,
-	ValueType_AUDIO
-} DataType;
-
-class Value {
-public:
-	DataType type;
-	void * data;
-
-	//temp video constructor
-	Value(cv::VideoCapture data) {
-		this->type = ValueType_VIDEO;
-		this->data = new cv::VideoCapture(data);
-	}
-
-	//Direct constructor
-	Value(DataType type, void * data) : type(type), data(data) {
-
-	}
-
-	//String
-	Value(std::string data)  {
-		this->type = ValueType_STRING;
-		this->data = new std::string(data);
-	}
-
-	//BOOL
-	Value(bool data)  {
-		this->type = ValueType_BOOL;
-		this->data = new bool(data);
-	}
-
-	//Number
-	Value(double data) {
-		this->type = ValueType_NUMBER;
-		this->data = new double(data);
-		//std::cout << *((double*)this->data) << std::endl;
-	}
-
-	//Undefined
-	Value() {
-		this->type = ValueType_UNDEFIND;
-		this->data = NULL;
-	}
-
-	Value *clone() const { return new Value(*this); }
-
-	void print() {
-		switch (this->type) {
-		case ValueType_STRING:
-			std::cout << *(std::string *)this->data << "\n";
-			break;
-		case ValueType_BOOL:
-			std::cout << *(bool *)this->data << "\n";
-			break;
-		case ValueType_NUMBER:
-			std::cout << *(double *)this->data << "\n";
-			break;
-		default:
-			std::cout << " Not implemented for this type!" << "\n";
-			break;
-		}
-	}
+enum class ValueType {
+	NUMBER,
+	BOOL,
+	STRING,
+	UNDEFIND,
+	VIDEO,
+	AUDIO
 };
 
-/*
-class Variables {
+class AbstractValue {
 public:
-	std::vector<Variable*> variables;
-
-	Variables() {
-
-	}
-
-	bool containts(std::string name) {
-		for (auto &variable : variables) {
-			if (variable->name == name) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	Variable * get_variable_by_name(std::string name) {
-		for (auto &variable : variables) {
-			if (variable->name == name) {
-				return variable;
-			}
-		}
-		return NULL;
-	}
-
-	void change_variable_data(std::string name, DataType type, void * data) {
-
-
-	}
-
-	void add(Variable * variable_to_add) {
-		Variable new_variable = *variable_to_add;
-
-		variables.push_back(variable_to_add->clone());
-	}
-
+	ValueType get_type() { return type_; }
+	virtual ~AbstractValue() = 0;
+protected:
+	ValueType type_;
 };
 
-class Variable {
+inline AbstractValue::~AbstractValue() {}
+
+template<typename T>
+class Value : public AbstractValue {
 public:
-	std::string name;
-	DataType type;
-	void* data;
-
-	Variable() {
+	Value(const T &data) :
+		data_(data)
+	{
+		if constexpr (std::is_arithmetic_v<T>) {
+			type_ = ValueType::NUMBER;
+		} else if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
+			type_ = ValueType::STRING;
+		} else if constexpr (std::is_same_v<std::decay_t<T>, bool>) {
+			type_ = ValueType::BOOL;
+		} else if constexpr (std::is_same_v<std::decay_t<T>, cv::VideoCapture>) {
+			type_ = ValueType::VIDEO;
+		}
 	}
 
-	Variable(std::string name, DataType type, void * data) : name(name), type(type), data(data) {
+	const T &get_data() {
+		return data_;
 	}
 
-	Variable *clone() const { return new Variable(*this); }
+	void set_data(const T &data) {
+		data_ = data;
+	}
 
-	
-};*/
+	virtual ~Value() {}
+
+private:
+	T data_;
+};
+
 
 class Program {
 public:
-
-	std::string error;
-
-	std::map<std::string, Value *> variables;
-
-	Value * get_variable_value_by_id(std::string varID) {
-		if (this->variables.find(varID) == this->variables.end()) {
-			this->error = "var id not found";
-			return NULL;
+	template<typename T>
+	Value<T> *get_variable_value_by_id(const std::string &id) const {
+		if (variables_.find(id) == variables_.end()) {
+			error_ = "Variable with such id does not exist";
 		}
-		return variables[varID];
+		return dynamic_cast<Value<T>>(variables_.at(id));
 	}
 
-	void printVariables() {
-		for (auto it = this->variables.cbegin(); it != this->variables.cend(); ++it)
-		{
-			std::cout << it->first;
-			it->second->print();
-		}
-	}
+	void add_variable(const std::string& id, const AstNode *data_node);
+
+	int execute(const Tree *ast_tree);
+private:
+	void execute_library_import(const Tree *ast_tree);
+	void execute_handler_import(const Tree *ast_tree);
+	void execute_renderer_declaration(const Tree *ast_tree);
+	void execute_source_declaration(const Tree *ast_tree);
+	void execute_set_declaration(const Tree *ast_tree);
+	void execute_element_declaration(const Tree *ast_tree);
+	void execute_tuple_declaration(const Tree *ast_tree);
+	void execute_aggregate_declaration(const Tree *ast_tree);
+	void execute_actions(const Tree *ast_tree);
+private:
+
+
+	//bool is_value(AstNodeType t);
+private:
+	std::string error_;
+
+	std::unordered_map<std::string, std::unique_ptr<AbstractValue>> variables_;
+    std::unordered_map<std::string, std::unique_ptr<Handler>> handlers_;
+
+	std::unordered_map<std::string, std::type_index> types_;
 };
 
-int execute(Tree * astTree);
-
+inline void Program::add_variable(const std::string& id, const AstNode *data_node) {
+	std::unique_ptr<AbstractValue> abs_val;
+	switch (data_node->type_) {
+	case AstNodeType::NUMBER:
+		abs_val = std::make_unique<Value<double>>(stod(data_node->value_));
+		break;
+	case AstNodeType::BOOL:
+		abs_val = std::make_unique<Value<bool>>(data_node->value_ == "true" ? true : false);
+		break;
+	case AstNodeType::STRING:
+		abs_val = std::make_unique<Value<std::string>>(data_node->value_);
+		break;
+	}
+	if (!abs_val.get()) {
+		error_ = "Invalid type of data node";
+	}
+	variables_.emplace(id, std::move(abs_val));
+}

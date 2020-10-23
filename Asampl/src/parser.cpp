@@ -158,8 +158,8 @@ static bool ebnf_sequence(Parser *parser, Tree *node_to_fill, grammar_rule_t rul
 
 	while (node = rule(parser), node && parser->get_error().empty()) {
 		if (node == nullptr) return false;
-		//nodes->ch.push_back(node);
-		node_to_fill->children_.push_back(node);
+		//nodes->ch.emplace_back(node);
+		node_to_fill->add_child(node);
 	}
 	return parser->get_error().empty() ? true : false;
 }
@@ -187,7 +187,7 @@ static Tree *ebnf_ap_main_rule(Parser *parser, grammar_rule_t next, grammar_rule
 	if (nextNode) {
 		Tree *apNode = ap(parser);
 		if (apNode) {
-			apNode->children_.insert(apNode->children_.begin(), nextNode);
+			apNode->add_child(apNode->get_children().cbegin(), nextNode);
 			return apNode;
 		}
 		return nextNode;
@@ -203,19 +203,18 @@ static Tree *ebnf_ap_recursive_rule(Parser *parser, TokenType types[], size_t ty
 	Tree *nextNode = next(parser);
 	Tree *apNode = ap(parser);
 	if (apNode) {
-		apNode->children_.insert(apNode->children_.begin(), nextNode);
+		apNode->add_child(apNode->get_children().cbegin(), nextNode);
 		node = apNode;
 	}
 	else {
 		node = nextNode;
 	}
 
-	opNode->children_.push_back(node);
+	opNode->add_child(node);
 	return opNode;
 }
 
-void parser_dec_level(Parser **parser) {
-	//(*parser)->level--;
+void parser_dec_level(Parser* *parser) {
 	(*parser)->reduce_level();
 }
 
@@ -249,39 +248,39 @@ static Tree *program(Parser *parser) {
 	Tree *prog_node = new Tree(new AstNode(AstNodeType::PROGRAM, "program"));
 
 	Tree *libraries_node = libraries_section(parser);
-	if (libraries_node) prog_node->children_.emplace_back(libraries_node);
+	if (libraries_node) prog_node->add_child(libraries_node);
 	
 	Tree *handlers_node = handlers_section(parser);
-	if (handlers_node) prog_node->children_.emplace_back(handlers_node);
+	if (handlers_node) prog_node->add_child(handlers_node);
 
 	Tree *renderers_node = renderers_section(parser);
-	if (renderers_node) prog_node->children_.emplace_back(renderers_node);
+	if (renderers_node) prog_node->add_child(renderers_node);
 
 	Tree *sources_node = sources_section(parser);
-	if (sources_node) prog_node->children_.emplace_back(sources_node);
+	if (sources_node) prog_node->add_child(sources_node);
 
 	Tree *sets_node = sets_section(parser);
-	if (sets_node) prog_node->children_.emplace_back(sets_node);
+	if (sets_node) prog_node->add_child(sets_node);
 
 	Tree *elements_node = elements_section(parser);
-	if (elements_node) prog_node->children_.emplace_back(elements_node);
+	if (elements_node) prog_node->add_child(elements_node);
 
 	Tree *tuples_node = tuples_section(parser);
-	if (tuples_node) prog_node->children_.emplace_back(tuples_node);
+	if (tuples_node) prog_node->add_child(tuples_node);
 
 	Tree *aggregates_node = aggregates_section(parser);
-	if (aggregates_node) prog_node->children_.emplace_back(aggregates_node);
+	if (aggregates_node) prog_node->add_child(aggregates_node);
 
 	Tree *actions_node = actions_section(parser);
 	if (!actions_node) {
-		Tree::free(prog_node);
+		//Tree::free(prog_node);
 		return nullptr;
 	}
 
-	prog_node->children_.emplace_back(actions_node);
+	prog_node->add_child(actions_node);
 
 	if (!expect(parser, TokenType::RIGHT_BRACE)) {
-		Tree::free(prog_node);
+		//Tree::free(prog_node);
 		return nullptr;
 	}
 
@@ -317,7 +316,7 @@ static Tree *library_import(Parser *parser) {
 	}
 
 	Tree *libImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "libImport"));
-	libImport->children_.push_back(nameNode);
+	libImport->add_child(nameNode);
 	return libImport;
 }
 
@@ -407,9 +406,9 @@ static Tree *item_import(Parser *parser) {
 		return nullptr;
 	}
 
-	Tree *itemImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "itemImport"));
-	itemImport->children_.push_back(nameNode);
-	itemImport->children_.push_back(dataNode);
+	Tree *itemImport = new Tree(new AstNode(AstNodeType::ITEM_IMPORT, "itemImport"));
+	itemImport->add_child(nameNode);
+	itemImport->add_child(dataNode);
 	return itemImport;
 }
 
@@ -483,9 +482,9 @@ static Tree *element_declaration(Parser *parser) {
 		return nullptr;
 	}
 
-	Tree *elementImport = new Tree(new AstNode(AstNodeType::LIB_IMPORT, "elementImport"));
-	elementImport->children_.push_back(nameNode);
-	elementImport->children_.push_back(dataNode);
+	Tree *elementImport = new Tree(new AstNode(AstNodeType::ELEMENT_IMPORT, "elementImport"));
+	elementImport->add_child(nameNode);
+	elementImport->add_child(dataNode);
 	return elementImport;
 }
 
@@ -559,7 +558,7 @@ static Tree *sequence_action(Parser *parser) {
 
 	Tree *sequenceNode = new Tree(new AstNode(AstNodeType::SEQUENCE, "sequence"));
 
-	sequenceNode->children_.push_back(blockNode);
+	sequenceNode->add_child(blockNode);
 
 	return sequenceNode;
 }
@@ -591,9 +590,9 @@ static Tree *download_action(Parser *parser) {
 
 	Tree *downloadNode = new Tree(new AstNode(AstNodeType::DOWNLOAD, "download"));
 
-	downloadNode->children_.push_back(idNode1);
-	downloadNode->children_.push_back(idNode2);
-	downloadNode->children_.push_back(idNode3);
+	downloadNode->add_child(idNode1);
+	downloadNode->add_child(idNode2);
+	downloadNode->add_child(idNode3);
 
 	return downloadNode;
 }
@@ -625,9 +624,9 @@ static Tree *upload_action(Parser *parser) {
 
 	Tree *uploadNode = new Tree(new AstNode(AstNodeType::UPLOAD, "upload"));
 
-	uploadNode->children_.push_back(idNode1);
-	uploadNode->children_.push_back(idNode2);
-	uploadNode->children_.push_back(idNode3);
+	uploadNode->add_child(idNode1);
+	uploadNode->add_child(idNode2);
+	uploadNode->add_child(idNode3);
 
 	return uploadNode;
 }
@@ -651,8 +650,8 @@ static Tree *render_action(Parser *parser) {
 
 	Tree *renderNode = new Tree(new AstNode(AstNodeType::RENDER, "render"));
 
-	renderNode->children_.push_back(idNode);
-	renderNode->children_.push_back(exprNode);
+	renderNode->add_child(idNode);
+	renderNode->add_child(exprNode);
 
 	return renderNode;
 }
@@ -676,8 +675,8 @@ static Tree *while_action(Parser *parser) {
 
 	Tree *whileNode = new Tree(new AstNode(AstNodeType::WHILE, "while"));
 
-	whileNode->children_.push_back(exprNode);
-	whileNode->children_.push_back(blockNode);
+	whileNode->add_child(exprNode);
+	whileNode->add_child(blockNode);
 	return whileNode;
 }
 
@@ -698,7 +697,7 @@ static Tree *switch_action(Parser *parser) {
 	}
 
 	Tree *switchNode = new Tree(new AstNode(AstNodeType::SWITCH, "switch"));
-	switchNode->children_.push_back(exprNode);
+	switchNode->add_child(exprNode);
 
 	if (!ebnf_sequence(parser, switchNode, switch_operator)) {
 		return nullptr;
@@ -713,8 +712,8 @@ static Tree *switch_action(Parser *parser) {
 		if (blockNode == nullptr || !parser->get_error().empty()) {
 			return nullptr;
 		}
-		default_node->children_.push_back(blockNode);
-		switchNode->children_.push_back(default_node);
+		default_node->add_child(blockNode);
+		switchNode->add_child(default_node);
 	}
 
 	if (!expect(parser, TokenType::RIGHT_BRACE)) {
@@ -742,8 +741,8 @@ static Tree *switch_operator(Parser *parser) {
 	}
 
 	Tree *case_node = new Tree(new AstNode(AstNodeType::CASE, "case"));
-	case_node->children_.push_back(exprNode);
-	case_node->children_.push_back(actionNode);
+	case_node->add_child(exprNode);
+	case_node->add_child(actionNode);
 	return case_node;
 }
 
@@ -765,7 +764,7 @@ static Tree *print_action(Parser *parser) {
 	}
 
 	Tree *printNode = new Tree(new AstNode(AstNodeType::PRINT, "print"));
-	printNode->children_.push_back(exprNode);
+	printNode->add_child(exprNode);
 	return printNode;
 }
 
@@ -798,8 +797,8 @@ static Tree *if_action(Parser *parser) {
 	}
 	Tree *ifNode = new Tree(new AstNode(AstNodeType::IF, "if"));
 
-	ifNode->children_.push_back(exprNode);
-	ifNode->children_.push_back(actionNode);
+	ifNode->add_child(exprNode);
+	ifNode->add_child(actionNode);
 
 	if (accept(parser, TokenType::ELSE)) {
 
@@ -808,7 +807,7 @@ static Tree *if_action(Parser *parser) {
 			return nullptr;
 		}
 
-		ifNode->children_.push_back(elseNode);
+		ifNode->add_child(elseNode);
 	}
 	return ifNode;
 }
@@ -850,9 +849,9 @@ static Tree *substitution_action(Parser *parser) {
 	if (!expect(parser, TokenType::SEMICOLON)) return nullptr;
 
 	Tree *substitution_node = new Tree(new AstNode(AstNodeType::SUBSTITUTION, "substitution"));
-	substitution_node->children_.push_back(idNode1);
-	substitution_node->children_.push_back(idNode2);
-	substitution_node->children_.push_back(exprNode);
+	substitution_node->add_child(idNode1);
+	substitution_node->add_child(idNode2);
+	substitution_node->add_child(exprNode);
 	return substitution_node;
 
 
@@ -877,8 +876,8 @@ static Tree *timeline_action(Parser *parser) {
 	}
 
 	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE, "timeline"));
-	timelineNode->children_.push_back(exprNode);
-	timelineNode->children_.push_back(actionNode);
+	timelineNode->add_child(exprNode);
+	timelineNode->add_child(actionNode);
 	return timelineNode;
 }
 
@@ -923,9 +922,9 @@ static Tree *timeline_expr(Parser *parser) {
 	if (!expect(parser, TokenType::RIGHT_BRACKET)) return nullptr;
 
 	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE_EXPR, "timeline_expr"));
-	timelineNode->children_.push_back(exprNode1);
-	timelineNode->children_.push_back(exprNode2);
-	timelineNode->children_.push_back(exprNode3);
+	timelineNode->add_child(exprNode1);
+	timelineNode->add_child(exprNode2);
+	timelineNode->add_child(exprNode3);
 	return timelineNode;
 }
 
@@ -940,7 +939,7 @@ static Tree *timeline_as(Parser *parser) {
 		return nullptr;
 	}
 	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE_AS, "timeline_as"));
-	timelineNode->children_.push_back(idNode);
+	timelineNode->add_child(idNode);
 	return timelineNode;
 }
 
@@ -955,7 +954,7 @@ static Tree *timeline_until(Parser *parser) {
 		return nullptr;
 	}
 	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE_UNTIL, "timeline_until"));
-	timelineNode->children_.push_back(exprNode);
+	timelineNode->add_child(exprNode);
 	return timelineNode;
 }
 
@@ -1093,7 +1092,7 @@ static Tree *unary(Parser *parser) {
 	Tree *primNode = primary(parser);
 
 	if (opNode) {
-		opNode->children_.push_back(primNode);
+		opNode->add_child(primNode);
 		return opNode;
 	}
 	return primNode;
@@ -1117,7 +1116,7 @@ static Tree *var_or_call(Parser *parser) {
 	Tree *argListNode = fn_call(parser);
 
 	if (argListNode) {
-		varNode->children_.push_back(argListNode);
+		varNode->add_child(argListNode);
 	}
 	return varNode;
 }
@@ -1145,13 +1144,13 @@ static Tree *arg_list(Parser *parser) {
 
 	if (exprNode != nullptr) {
 		//List_add(argListNode->children_, exprNode);
-		argListNode->children_.push_back(exprNode);
+		argListNode->add_child(exprNode);
 		while (true) {
 			if (!accept(parser, TokenType::COMMA)) break;
 
 			exprNode = expr(parser);
 			if (exprNode) {
-				argListNode->children_.push_back(exprNode);
+				argListNode->add_child(exprNode);
 			}
 			else {
 				break;
@@ -1176,6 +1175,7 @@ static Tree *arr_ini(Parser *parser) {
 	Tree *argListNode = arg_list(parser);
 	expect(parser, TokenType::RIGHT_BRACE);
 }
+
 static AstNodeType tokenType_to_astType(TokenType type) {
 	switch (type)
 	{
