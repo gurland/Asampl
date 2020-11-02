@@ -15,7 +15,7 @@ enum class ValueType {
 	NUMBER,
 	BOOL,
 	STRING,
-	UNDEFIND,
+	UNDEFINED,
 	VIDEO,
 	AUDIO
 };
@@ -23,12 +23,17 @@ enum class ValueType {
 class AbstractValue {
 public:
 	ValueType get_type() { return type_; }
-	virtual ~AbstractValue() = 0;
+	virtual ~AbstractValue() = default;
+
+    virtual std::unique_ptr<AbstractValue> clone() const = 0;
+
+    static std::unique_ptr<AbstractValue> from_literal(const AstNode* data_node);
+
+    template<typename T>
+    T& try_get();
 protected:
 	ValueType type_;
 };
-
-inline AbstractValue::~AbstractValue() {}
 
 template<typename T>
 class Value : public AbstractValue {
@@ -47,7 +52,11 @@ public:
 		}
 	}
 
-	const T &get_data() {
+    std::unique_ptr<AbstractValue> clone() const override {
+        return std::make_unique<Value<T>>(*this);
+    }
+
+	T& get_data() {
 		return data_;
 	}
 
@@ -55,17 +64,38 @@ public:
 		data_ = data;
 	}
 
-	virtual ~Value() {}
-
 private:
 	T data_;
 };
 
+class UndefinedValue : public AbstractValue {
+public:
+    UndefinedValue() {
+        type_ = ValueType::UNDEFINED;
+    }
+
+    std::unique_ptr<AbstractValue> clone() const override {
+        return std::make_unique<UndefinedValue>();
+    }
+};
+
+template<typename T>
+T& AbstractValue::try_get() {
+    return dynamic_cast<Value<T>&>(*this).get_data();
+}
+
 
 class Program {
 public:
+    std::unique_ptr<AbstractValue> get_abstract_variable_value_by_id(const std::string& id) {
+		if (variables_.find(id) == variables_.end()) {
+			error_ = "Variable with such id does not exist";
+		}
+		return variables_.at(id)->clone();
+    }
+
 	template<typename T>
-	Value<T> *get_variable_value_by_id(const std::string &id) const {
+	Value<T> *get_variable_value_by_id(const std::string &id) {
 		if (variables_.find(id) == variables_.end()) {
 			error_ = "Variable with such id does not exist";
 		}
@@ -85,6 +115,8 @@ private:
 	void execute_tuple_declaration(const Tree *ast_tree);
 	void execute_aggregate_declaration(const Tree *ast_tree);
 	void execute_actions(const Tree *ast_tree);
+
+    std::unique_ptr<AbstractValue> evaluate_expression(const Tree* ast_tree);
 private:
 
 
@@ -99,20 +131,10 @@ private:
 };
 
 inline void Program::add_variable(const std::string& id, const AstNode *data_node) {
-	std::unique_ptr<AbstractValue> abs_val;
-	switch (data_node->type_) {
-	case AstNodeType::NUMBER:
-		abs_val = std::make_unique<Value<double>>(stod(data_node->value_));
-		break;
-	case AstNodeType::BOOL:
-		abs_val = std::make_unique<Value<bool>>(data_node->value_ == "true" ? true : false);
-		break;
-	case AstNodeType::STRING:
-		abs_val = std::make_unique<Value<std::string>>(data_node->value_);
-		break;
-	}
-	if (!abs_val.get()) {
+    auto value = AbstractValue::from_literal(data_node);
+    if (value != nullptr) {
+        variables_.emplace(id, std::move(value));
+    } else {
 		error_ = "Invalid type of data node";
-	}
-	variables_.emplace(id, std::move(abs_val));
+    }
 }
