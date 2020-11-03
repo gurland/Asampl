@@ -20,14 +20,19 @@ enum class ValueType {
 	AUDIO
 };
 
+class AbstractValue;
+using ValuePtr = std::shared_ptr<AbstractValue>;
+
+using Function = std::function<ValuePtr(const std::vector<ValuePtr>&)>;
+
 class AbstractValue {
 public:
 	ValueType get_type() { return type_; }
 	virtual ~AbstractValue() = default;
 
-    virtual std::unique_ptr<AbstractValue> clone() const = 0;
+    virtual ValuePtr clone() const = 0;
 
-    static std::unique_ptr<AbstractValue> from_literal(const AstNode* data_node);
+    static ValuePtr from_literal(const AstNode* data_node);
 
     template<typename T>
     T& try_get();
@@ -52,8 +57,8 @@ public:
 		}
 	}
 
-    std::unique_ptr<AbstractValue> clone() const override {
-        return std::make_unique<Value<T>>(*this);
+    ValuePtr clone() const override {
+        return std::make_shared<Value<T>>(*this);
     }
 
 	T& get_data() {
@@ -74,8 +79,8 @@ public:
         type_ = ValueType::UNDEFINED;
     }
 
-    std::unique_ptr<AbstractValue> clone() const override {
-        return std::make_unique<UndefinedValue>();
+    ValuePtr clone() const override {
+        return std::make_shared<UndefinedValue>();
     }
 };
 
@@ -84,14 +89,13 @@ T& AbstractValue::try_get() {
     return dynamic_cast<Value<T>&>(*this).get_data();
 }
 
-
 class Program {
 public:
-    std::unique_ptr<AbstractValue> get_abstract_variable_value_by_id(const std::string& id) {
+    ValuePtr get_abstract_variable_value_by_id(const std::string& id) {
 		if (variables_.find(id) == variables_.end()) {
 			error_ = "Variable with such id does not exist";
 		}
-		return variables_.at(id)->clone();
+		return variables_.at(id);
     }
 
 	template<typename T>
@@ -103,6 +107,7 @@ public:
 	}
 
 	void add_variable(const std::string& id, const AstNode *data_node);
+    void add_function(const std::string& id, Function func);
 
 	int execute(const Tree *ast_tree);
 private:
@@ -116,7 +121,7 @@ private:
 	void execute_aggregate_declaration(const Tree *ast_tree);
 	void execute_actions(const Tree *ast_tree);
 
-    std::unique_ptr<AbstractValue> evaluate_expression(const Tree* ast_tree);
+    ValuePtr evaluate_expression(const Tree* ast_tree);
 private:
 
 
@@ -124,8 +129,9 @@ private:
 private:
 	std::string error_;
 
-	std::unordered_map<std::string, std::unique_ptr<AbstractValue>> variables_;
+	std::unordered_map<std::string, ValuePtr> variables_;
     std::unordered_map<std::string, std::unique_ptr<Handler>> handlers_;
+    std::unordered_map<std::string, Function> functions_;
 
 	std::unordered_map<std::string, std::type_index> types_;
 };
@@ -137,4 +143,8 @@ inline void Program::add_variable(const std::string& id, const AstNode *data_nod
     } else {
 		error_ = "Invalid type of data node";
     }
+}
+
+inline void Program::add_function(const std::string& id, Function func) {
+    functions_.emplace(id, func);
 }

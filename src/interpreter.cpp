@@ -11,14 +11,14 @@
 
 static bool is_value(AstNodeType t);
 
-std::unique_ptr<AbstractValue> AbstractValue::from_literal(const AstNode* data_node) {
+ValuePtr AbstractValue::from_literal(const AstNode* data_node) {
     switch (data_node->type_) {
     case AstNodeType::NUMBER:
-        return std::make_unique<Value<double>>(stod(data_node->value_));
+        return std::make_shared<Value<double>>(stod(data_node->value_));
     case AstNodeType::BOOL:
-        return std::make_unique<Value<bool>>(data_node->value_ == "true");
+        return std::make_shared<Value<bool>>(data_node->value_ == "true");
     case AstNodeType::STRING:
-        return std::make_unique<Value<std::string>>(data_node->value_);
+        return std::make_shared<Value<std::string>>(data_node->value_);
     default:
         return nullptr;
     }
@@ -151,7 +151,7 @@ void Program::execute_actions(const Tree *ast_tree) {
 #define UNARY_EXPR \
     auto operand = evaluate_expression(children.at(0))
 
-std::unique_ptr<AbstractValue> Program::evaluate_expression(const Tree* ast_tree) {
+ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
     const auto& children = ast_tree->get_children();
 
 
@@ -164,27 +164,27 @@ std::unique_ptr<AbstractValue> Program::evaluate_expression(const Tree* ast_tree
             }
 
             variable->second = evaluate_expression(children.at(1));
-            return std::make_unique<UndefinedValue>();
+            return std::make_shared<UndefinedValue>();
         }
 
         case AstNodeType::ADD: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() + right->try_get<double>());
         }
         case AstNodeType::SUB: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() - right->try_get<double>());
         }
         case AstNodeType::MUL: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() * right->try_get<double>());
         }
         case AstNodeType::DIV: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() / right->try_get<double>());
         }
         case AstNodeType::MOD: {
@@ -194,13 +194,13 @@ std::unique_ptr<AbstractValue> Program::evaluate_expression(const Tree* ast_tree
             BINARY_EXPR;
             switch (left->get_type()) {
             case ValueType::NUMBER:
-                return std::make_unique<Value<bool>>(
+                return std::make_shared<Value<bool>>(
                     left->try_get<double>() == right->try_get<double>());
             case ValueType::BOOL:
-                return std::make_unique<Value<bool>>(
+                return std::make_shared<Value<bool>>(
                     left->try_get<bool>() == right->try_get<bool>());
             case ValueType::STRING:
-                return std::make_unique<Value<bool>>(
+                return std::make_shared<Value<bool>>(
                     left->try_get<std::string>() == right->try_get<std::string>());
             default:
                 assert(false && "unimplemented");
@@ -210,13 +210,13 @@ std::unique_ptr<AbstractValue> Program::evaluate_expression(const Tree* ast_tree
             BINARY_EXPR;
             switch (left->get_type()) {
             case ValueType::NUMBER:
-                return std::make_unique<Value<bool>>(
+                return std::make_shared<Value<bool>>(
                     left->try_get<double>() != right->try_get<double>());
             case ValueType::BOOL:
-                return std::make_unique<Value<bool>>(
+                return std::make_shared<Value<bool>>(
                     left->try_get<bool>() != right->try_get<bool>());
             case ValueType::STRING:
-                return std::make_unique<Value<bool>>(
+                return std::make_shared<Value<bool>>(
                     left->try_get<std::string>() != right->try_get<std::string>());
             default:
                 assert(false && "unimplemented");
@@ -224,36 +224,36 @@ std::unique_ptr<AbstractValue> Program::evaluate_expression(const Tree* ast_tree
         }
         case AstNodeType::NOT: {
             UNARY_EXPR;
-            return std::make_unique<Value<bool>>(!operand->try_get<bool>());
+            return std::make_shared<Value<bool>>(!operand->try_get<bool>());
         }
         case AstNodeType::MORE: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() > right->try_get<double>());
         }
         case AstNodeType::LESS: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() < right->try_get<double>());
         }
         case AstNodeType::MORE_OR_EQUAL: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() >= right->try_get<double>());
         }
         case AstNodeType::LESS_OR_EQUAL: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<double>() <= right->try_get<double>());
         }
         case AstNodeType::AND: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<bool>() && right->try_get<bool>());
         }
         case AstNodeType::OR: {
             BINARY_EXPR;
-            return std::make_unique<Value<double>>(
+            return std::make_shared<Value<double>>(
                 left->try_get<bool>() || right->try_get<bool>());
         }
         case AstNodeType::NUMBER:
