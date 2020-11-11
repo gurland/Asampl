@@ -8,7 +8,8 @@
 #include <fstream>
 #include <functional>
 
-#define arraysize(x) sizeof(x)/sizeof(x[0])
+template<typename T, std::size_t size>
+std::size_t arraysize(T(&)[size]) { return size; }
 
 using namespace Lexer;
 

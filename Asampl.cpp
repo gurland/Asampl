@@ -16,7 +16,7 @@
 int main(int argc, char *argv[])
 {
 	if (argc < 2) {
-		std::cerr << "Error, no input file specified";
+		std::cerr << "Error, no input file specified\n";
 		return 0;
 	}
 	const char *file_name = argv[1];
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	std::fstream file_stream(file_name);
 
 	if (!file_stream) {
-		std::cerr << "Error while trying to open input file";
+		std::cerr << "Error while trying to open input file\n";
 		return 0;
 	}
 
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	int code = Lexer::split_tokens(file_stream, lexem_sequence);
 
 	if (code == -1) {
-		std::cerr << "Error while reading program file stream";
+		std::cerr << "Error while reading program file stream\n";
 		return 0;
 	}
 
@@ -41,14 +41,14 @@ int main(int argc, char *argv[])
 	Parser p(&lexem_sequence);
 	Tree *tree = p.buid_tree();
 	if (!tree) {
-		std::cerr << "Error while parsing sequence of lexemes";
+		std::cerr << "Error while parsing sequence of lexemes\n";
 		return 0;
 	}
 
 	tree->print(std::cout);
 
 	Program program;
-	program.execute(tree);
+	// program.execute(tree);
 
 	//Tree::free(tree);
 	return 0;
