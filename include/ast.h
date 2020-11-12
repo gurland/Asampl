@@ -20,6 +20,8 @@ enum class AstNodeType {
 	LESS_OR_EQUAL,
 	AND,
 	OR,
+    //
+    FUNCTION_CALL,
 	//
 	NUMBER,
 	STRING,
