@@ -9,21 +9,26 @@
 
 #include <iostream>
 
-#include "interpreter.h"
+#include "interpreter/value.h"
 
 using Function = std::function<ValuePtr(const std::vector<ValuePtr>&)>;
+
+template< typename T >
+auto convert_argument(ValuePtr& t) {
+    if constexpr (std::is_same_v<T, ValuePtr>) {
+        return std::tie(t);
+    } else {
+        return std::tie(t->template try_get<T>());
+    }
+}
 
 template<std::size_t first_arg, typename ArgsArray, typename T, typename... Ts>
 std::tuple<T&, Ts&...> convert_arguments(ArgsArray& args) {
     if constexpr (sizeof...(Ts) == 0) {
-        if constexpr (std::is_same_v<T, ValuePtr>) {
-            return std::tie(args[first_arg]);
-        } else {
-            return std::tie(args[first_arg]->template try_get<T>());
-        }
+        return convert_argument<T>(args[first_arg]);
     } else {
         return std::tuple_cat(
-            std::tie((args[first_arg])),
+            convert_argument<T>(args[first_arg]),
             convert_arguments<first_arg + 1, ArgsArray, Ts...>(args)
         );
     }

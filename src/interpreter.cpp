@@ -29,10 +29,6 @@ int Program::execute(const Tree *ast_tree) {
 	assert(ast_node->type_ == AstNodeType::PROGRAM);
 
 	for (const auto& child : ast_tree->get_children()) {
-		if (!error_.empty()) {
-			//todo
-			return EXIT_FAILURE;
-		}
 		const auto child_node = child->get_node();
 		switch (child_node->type_) {
 		case AstNodeType::LIBRARIES: {
@@ -72,8 +68,7 @@ int Program::execute(const Tree *ast_tree) {
 			break;
 		}
 		default: {
-			error_ = "Unrecognized section";
-			break;
+            throw InterpreterException("Unrecognized section");
 		}
 		}
 	}
@@ -141,7 +136,9 @@ void Program::execute_aggregate_declaration(const Tree *ast_tree) {
 }
 
 void Program::execute_actions(const Tree *ast_tree) {
-
+    for (const auto& child : ast_tree->get_children()) {
+        evaluate_expression(child);
+    }
 }
 
 #define BINARY_EXPR \
@@ -157,10 +154,10 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
 
     switch (ast_tree->get_node()->type_) {
         case AstNodeType::ASSIGN: {
-            auto variable = variables_.find(children.at(0)->get_node()->value_);
+            const auto& variable_id = children.at(0)->get_node()->value_;
+            auto variable = variables_.find(variable_id);
             if (variable == variables_.end()) {
-                error_ = "Variable with such id does not exist";
-                assert(false && "unimplemented");
+                throw InterpreterException("Variable with id '" + variable_id + "' does not exist");
             }
 
             variable->second = evaluate_expression(children.at(1));
@@ -264,8 +261,24 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
         case AstNodeType::ID:
             return get_abstract_variable_value_by_id(ast_tree->get_node()->value_);
 
+        case AstNodeType::FUNCTION_CALL: {
+            const auto& function_name = ast_tree->get_node()->value_;
+            const auto function_it = functions_.find(function_name);
+            if (function_it == functions_.end()) {
+                throw InterpreterException("Function " + function_name + " does not exist");
+            }
+
+            std::vector<ValuePtr> arguments;
+            arguments.reserve(ast_tree->get_children().size());
+            for (const auto& child : ast_tree->get_children()) {
+                arguments.emplace_back(evaluate_expression(child));
+            }
+
+            return function_it->second(arguments);
+        }
+
         default:
-            assert(false && "unimplemented");
+            throw InterpreterException("Unimplemented operation");
     }
 }
 

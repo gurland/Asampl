@@ -12,7 +12,6 @@
 #include "lexer.h"
 #include "parser.h"
 #include "interpreter.h"
-#include "function.h"
 
 int main(int argc, char *argv[])
 {
