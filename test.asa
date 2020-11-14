@@ -1,0 +1,12 @@
+PROGRAM PlayAndSaveVideo {
+    Elements {
+	    num = 0;
+    }
+    Actions {
+	    num = 10 + 5 / 2;
+        dbg(num);
+    }
+}
+
+
+

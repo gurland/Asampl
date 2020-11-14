@@ -42,6 +42,16 @@ public:
 		children_.emplace(it, child);
 	}
 
+    const Tree* find_child(AstNodeType type) const {
+        for (auto& child : children_) {
+            if (child->get_node()->type_ == type) {
+                return child;
+            }
+        }
+
+        return nullptr;
+    }
+
     template< typename M, typename... Ms >
     bool match(M&& node_matcher, Ms&&... child_matchers) const;
 

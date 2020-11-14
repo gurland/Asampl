@@ -258,23 +258,25 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
         case AstNodeType::BOOL:
         return AbstractValue::from_literal(ast_tree->get_node());
 
-        case AstNodeType::ID:
-            return get_abstract_variable_value_by_id(ast_tree->get_node()->value_);
+        case AstNodeType::ID: {
+            auto arglist = ast_tree->find_child(AstNodeType::ARGLIST);
+            if (arglist == nullptr) {
+                return get_abstract_variable_value_by_id(ast_tree->get_node()->value_);
+            } else {
+                const auto& function_name = ast_tree->get_node()->value_;
+                const auto function_it = functions_.find(function_name);
+                if (function_it == functions_.end()) {
+                    throw InterpreterException("Function " + function_name + " does not exist");
+                }
 
-        case AstNodeType::FUNCTION_CALL: {
-            const auto& function_name = ast_tree->get_node()->value_;
-            const auto function_it = functions_.find(function_name);
-            if (function_it == functions_.end()) {
-                throw InterpreterException("Function " + function_name + " does not exist");
+                std::vector<ValuePtr> arguments;
+                arguments.reserve(arglist->get_children().size());
+                for (const auto& child : arglist->get_children()) {
+                    arguments.emplace_back(evaluate_expression(child));
+                }
+
+                return function_it->second(arguments);
             }
-
-            std::vector<ValuePtr> arguments;
-            arguments.reserve(ast_tree->get_children().size());
-            for (const auto& child : ast_tree->get_children()) {
-                arguments.emplace_back(evaluate_expression(child));
-            }
-
-            return function_it->second(arguments);
         }
 
         default:

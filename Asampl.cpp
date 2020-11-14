@@ -48,7 +48,13 @@ int main(int argc, char *argv[])
 	tree->print(std::cout);
 
 	Program program;
-	// program.execute(tree);
+
+    std::function<void(ValuePtr)> print = [](ValuePtr value) {
+        std::cout << "DEBUG: " << value->to_string() << std::endl;
+    };
+    program.add_function("dbg", make_asampl_function(print));
+
+    program.execute(tree);
 
 	//Tree::free(tree);
 	return 0;
