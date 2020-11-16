@@ -6,14 +6,15 @@
 #include <opencv2/opencv.hpp>
 
 #include "tree.h"
+#include "interpreter/image.h"
 
 enum class ValueType {
 	NUMBER,
 	BOOL,
 	STRING,
 	UNDEFINED,
-	VIDEO,
-	AUDIO
+	AUDIO,
+    IMAGE
 };
 
 class AbstractValue;
@@ -47,14 +48,19 @@ public:
 			type_ = ValueType::STRING;
 		} else if constexpr (std::is_same_v<std::decay_t<T>, bool>) {
 			type_ = ValueType::BOOL;
-		} else if constexpr (std::is_same_v<std::decay_t<T>, cv::VideoCapture>) {
-			type_ = ValueType::VIDEO;
+		} else if constexpr (std::is_same_v<std::decay_t<T>, AsaImage>) {
+			type_ = ValueType::IMAGE;
 		}
 	}
 
     std::string to_string() const override {
         if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
             return data_;
+        } else if constexpr (std::is_same_v<std::decay_t<T>, AsaImage>) {
+            const cv::Mat& data = data_.data;
+            std::stringstream ss;
+            ss << "[IMAGE " << data.size().width << ":" << data.size().height << "]";
+            return ss.str();
         } else {
             return std::to_string(data_);
         }

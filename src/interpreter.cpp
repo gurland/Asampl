@@ -9,6 +9,8 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "interpreter/test_stdlib.h"
+
 static bool is_value(AstNodeType t);
 
 ValuePtr AbstractValue::from_literal(const AstNode* data_node) {
@@ -279,6 +281,25 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             }
         }
 
+        case AstNodeType::WHILE: {
+            assert(children.size() >= 2);
+
+            const auto& condition = children[0];
+            const auto& block = children[1];
+
+            while (evaluate_expression(condition)->try_get<bool>()) {
+                evaluate_expression(block);
+            }
+            return std::make_shared<UndefinedValue>();
+        }
+
+        case AstNodeType::BLOCK: {
+             for (const auto& child : children) {
+                 evaluate_expression(child);
+             }
+             return std::make_shared<UndefinedValue>();
+        }
+
         default:
             throw InterpreterException("Unimplemented operation");
     }
@@ -286,6 +307,12 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
 
 #undef BINARY_EXPR
 #undef UNARY_EXPR
+
+void Program::load_stdlib() {
+    for (const auto& [ name, func ] : get_stdlib_functions()) {
+        add_function(name, func);
+    }
+}
 
 
 static bool is_value(AstNodeType t) {

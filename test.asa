@@ -1,12 +1,11 @@
 PROGRAM PlayAndSaveVideo {
     Elements {
-	    num = 0;
+	    img = 0;
     }
     Actions {
-	    num = 10 + 5 / 2;
-        dbg(num);
+        while (0 == 0) {
+            img = random_image(300, 300);
+            show_image(img);
+        }
     }
 }
-
-
-

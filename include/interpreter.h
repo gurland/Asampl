@@ -32,6 +32,8 @@ public:
 	void add_variable(const std::string& id, const AstNode *data_node);
     void add_function(const std::string& id, Function func);
 
+    void load_stdlib();
+
 	int execute(const Tree *ast_tree);
 private:
 	void execute_library_import(const Tree *ast_tree);
