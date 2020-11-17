@@ -2,10 +2,15 @@
 
 #include <functional>
 #include <string>
+#include <fstream>
+#include <memory>
+#include <optional>
 
 #include <dynalo/dynalo.hpp>
 
 #include "handler_interface.h"
+#include "interpreter/exception.h"
+#include "interpreter/image.h"
 
 class Handler {
 public:
@@ -24,4 +29,19 @@ public:
 
 protected:
     dynalo::library library_;
+};
+
+struct ActiveDownload {
+    std::ifstream stream_in;
+    AsaHandler* handler_ctx;
+    Handler* handler;
+
+    ActiveDownload(const std::string& filename, Handler* handler);
+    ~ActiveDownload();
+
+    ActiveDownload(const ActiveDownload&) = delete;
+    ActiveDownload(ActiveDownload&& other);
+
+    bool fill_data();
+    std::optional<AsaImage> download_frame();
 };

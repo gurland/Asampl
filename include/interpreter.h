@@ -7,7 +7,7 @@
 #include <typeinfo>
 
 #include "tree.h"
-#include "handler.h"
+#include "interpreter/handler.h"
 #include "interpreter/exception.h"
 #include "interpreter/value.h"
 #include "interpreter/function.h"
@@ -55,6 +55,8 @@ private:
 	std::unordered_map<std::string, ValuePtr> variables_;
     std::unordered_map<std::string, std::unique_ptr<Handler>> handlers_;
     std::unordered_map<std::string, Function> functions_;
+    std::map<std::pair<std::string, std::string>, ActiveDownload> active_downloads_;
+    std::unordered_map<std::string, std::string> sources_;
 
 	std::unordered_map<std::string, std::type_index> types_;
 };

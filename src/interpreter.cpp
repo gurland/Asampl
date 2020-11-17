@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cmath>
 #include <ctime>
+#include <fstream>
 
 #include <opencv2/opencv.hpp>
 
@@ -83,15 +84,15 @@ void Program::execute_library_import(const Tree *ast_tree) {
 }
 
 void Program::execute_handler_import(const Tree *ast_tree) {
-    for (auto child : ast_tree->get_children()) {
+    for (const auto& child : ast_tree->get_children()) {
 		const bool matches = child->match(
-			AstNodeType::ELEMENT_IMPORT,
-			AstNodeType::ID,
-			is_value
+            AstNodeType::ITEM_IMPORT,
+            AstNodeType::ID,
+            is_value
 		);
         assert(matches);
 
-        const auto children = child->get_children();
+        const auto& children = child->get_children();
         const auto id_node = children[0]->get_node();
         const auto data_node = children[1]->get_node();
 
@@ -104,7 +105,13 @@ void Program::execute_renderer_declaration(const Tree *ast_tree) {
 }
 
 void Program::execute_source_declaration(const Tree *ast_tree) {
+    for (const auto child : ast_tree->get_children()) {
+        const auto& children = child->get_children();
+        const auto id_node = children[0]->get_node();
+        const auto data_node = children[1]->get_node();
 
+        sources_[id_node->value_] = data_node->value_;
+    }
 }
 
 void Program::execute_set_declaration(const Tree *ast_tree) {
@@ -112,7 +119,7 @@ void Program::execute_set_declaration(const Tree *ast_tree) {
 }
 
 void Program::execute_element_declaration(const Tree *ast_tree) {
-	for (auto child : ast_tree->get_children()) {
+	for (const auto& child : ast_tree->get_children()) {
 
 		const bool matches = child->match(
 			AstNodeType::ELEMENT_IMPORT,
@@ -121,7 +128,7 @@ void Program::execute_element_declaration(const Tree *ast_tree) {
 		);
         assert(matches);
 		
-        const auto children = child->get_children();
+        const auto& children = child->get_children();
         const auto id_node = children[0]->get_node();
         const auto data_node = children[1]->get_node();
 
@@ -298,6 +305,35 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                  evaluate_expression(child);
              }
              return std::make_shared<UndefinedValue>();
+        }
+
+        case AstNodeType::DOWNLOAD: {
+            const auto& target = children[0]->get_node()->value_;
+            auto variable_it = variables_.find(target);
+            if (variable_it == variables_.end()) {
+                throw InterpreterException("Variable with id '" + target + "' does not exist");
+            }
+
+            const auto& source_node = children[1]->get_node()->value_;
+            const auto& handler_node = children[2]->get_node()->value_;
+
+            const auto& source_file = sources_.at(source_node);
+
+            auto active_it = active_downloads_.find(std::make_pair(source_file, handler_node));
+            if (active_it == active_downloads_.end()) {
+                Handler* handler = handlers_.at(handler_node).get();
+                active_it = active_downloads_.emplace(
+                    std::pair(source_node, handler_node),
+                    ActiveDownload{source_file, handler}).first;
+            }
+
+            auto frame = active_it->second.download_frame();
+            if (frame.has_value()) {
+                variable_it->second = std::make_shared<Value<AsaImage>>(*frame);
+            } else {
+                variable_it->second = std::make_shared<UndefinedValue>();
+            }
+            return std::make_shared<UndefinedValue>();
         }
 
         default:

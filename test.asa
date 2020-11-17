@@ -1,10 +1,16 @@
 PROGRAM PlayAndSaveVideo {
+    Handlers {
+        FFMpeg from 'ffmpeg-handler';
+    }
+    Sources {
+        Video1 from 'test.ogv';
+    }
     Elements {
 	    img = 0;
     }
     Actions {
-        while (0 == 0) {
-            img = random_image(300, 300);
+        while (!is_undefined(img)) {
+            Download img from Video1 with FFMpeg;
             show_image(img);
         }
     }
