@@ -24,3 +24,9 @@ add_subdirectory(src)
 add_executable(asampl Asampl.cpp)
 
 target_link_libraries(asampl asampl-lib)
+
+#handlers
+file(GLOB HANDLERS handlers/*)
+foreach(HANDLER_DIR ${HANDLERS})
+    add_subdirectory(${HANDLER_DIR})
+endforeach()
