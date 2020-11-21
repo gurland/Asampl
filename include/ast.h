@@ -21,8 +21,6 @@ enum class AstNodeType {
 	AND,
 	OR,
     //
-    FUNCTION_CALL,
-	//
 	NUMBER,
 	STRING,
 	ID,

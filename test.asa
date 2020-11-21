@@ -1,0 +1,19 @@
+PROGRAM PlayAndSaveVideo {
+    Handlers {
+        FFMpeg from 'ffmpeg-handler';
+    }
+    Sources {
+        Video1 from 'test.ogv';
+    }
+    Elements {
+	    img = 0;
+    }
+    Actions {
+        while (!is_undefined(img)) {
+            Download img from Video1 with FFMpeg;
+            if (!is_undefined(img)) {
+                show_image(img);
+            }
+        }
+    }
+}

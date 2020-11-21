@@ -48,7 +48,8 @@ int main(int argc, char *argv[])
 	tree->print(std::cout);
 
 	Program program;
-	// program.execute(tree);
+    program.load_stdlib();
+    program.execute(tree);
 
 	//Tree::free(tree);
 	return 0;

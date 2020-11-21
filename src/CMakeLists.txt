@@ -1,4 +1,4 @@
-file(GLOB ASAMPL_SOURCES *.cpp)
+file(GLOB ASAMPL_SOURCES *.cpp **/*.cpp)
 
 add_library(asampl-lib STATIC
     ${ASAMPL_SOURCES})
