@@ -342,12 +342,7 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                     ActiveDownload{source_file, handler}).first;
             }
 
-            auto frame = active_it->second.download_frame();
-            if (frame.has_value()) {
-                variable_it->second = std::make_shared<Value<AsaImage>>(*frame);
-            } else {
-                variable_it->second = std::make_shared<UndefinedValue>();
-            }
+            variable_it->second = active_it->second.download_frame();
             return std::make_shared<UndefinedValue>();
         }
 

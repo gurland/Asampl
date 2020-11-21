@@ -11,6 +11,7 @@
 #include "handler_interface.h"
 #include "interpreter/exception.h"
 #include "interpreter/image.h"
+#include "interpreter/value.h"
 
 class Handler {
 public:
@@ -43,5 +44,8 @@ struct ActiveDownload {
     ActiveDownload(ActiveDownload&& other);
 
     bool fill_data();
-    std::optional<AsaImage> download_frame();
+    ValuePtr download_frame();
+
+private:
+    ValuePtr frame_to_value(const AsaData* data);
 };

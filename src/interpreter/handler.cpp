@@ -65,7 +65,7 @@ ActiveDownload::ActiveDownload(ActiveDownload&& other) {
 }
 
 bool ActiveDownload::fill_data() {
-    if (stream_in.peek() == EOF) {
+    if (stream_in.eof() || stream_in.peek() == EOF) {
         return false;
     }
 
@@ -77,35 +77,49 @@ bool ActiveDownload::fill_data() {
     return true;
 }
 
-std::optional<AsaImage> ActiveDownload::download_frame() {
+ValuePtr ActiveDownload::download_frame() {
     fill_data();
 
     while (true) {
         auto frame = handler->download(handler_ctx);
         switch (frame->status) {
             case ASA_STATUS_FATAL: {
-                std::cerr << "fatal" << std::endl;
                 std::string msg = frame->error;
                 handler->free(handler_ctx, frame);
                 throw InterpreterException(msg);
             }
             case ASA_STATUS_AGAIN:
             case ASA_STATUS_EOI:
-                std::cerr << "eoi" << std::endl;
                 handler->free(handler_ctx, frame);
                 if (fill_data()) {
                     continue;
                 } else {
-                    return std::nullopt;
+                    return std::make_shared<UndefinedValue>();
                 }
             default: {
-                std::cerr << "normal" << std::endl;
-                auto video_frame = reinterpret_cast<AsaVideoData*>(frame->data);
-                cv::Mat image(video_frame->height, video_frame->width, CV_8UC3, video_frame->frame);
-                AsaImage ret { image.clone() };
+                auto ret = frame_to_value(frame);
                 handler->free(handler_ctx, frame);
                 return ret;
             }
         }
+    }
+}
+
+ValuePtr ActiveDownload::frame_to_value(const AsaData* frame) {
+    switch (handler->get_type(handler_ctx)) {
+        case ASA_VIDEO: {
+            auto video_frame = reinterpret_cast<AsaVideoData*>(frame->data);
+            cv::Mat image(video_frame->height, video_frame->width, CV_8UC3, video_frame->frame);
+            AsaImage ret { image.clone() };
+            return std::make_shared<Value<AsaImage>>(std::move(ret));
+        }
+
+        case ASA_NUMBER: {
+            const double value = *reinterpret_cast<double*>(frame->data);
+            return std::make_shared<Value<double>>(value);
+        }
+
+        default:
+            throw InterpreterException("Handler type not supported");
     }
 }

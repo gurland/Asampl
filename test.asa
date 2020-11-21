@@ -11,7 +11,9 @@ PROGRAM PlayAndSaveVideo {
     Actions {
         while (!is_undefined(img)) {
             Download img from Video1 with FFMpeg;
-            show_image(img);
+            if (!is_undefined(img)) {
+                show_image(img);
+            }
         }
     }
 }
