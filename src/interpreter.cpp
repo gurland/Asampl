@@ -288,6 +288,21 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             }
         }
 
+        case AstNodeType::IF: {
+            assert(children.size() >= 2);
+
+            const auto& condition = children[0];
+            const auto& block = children[1];
+
+            if (evaluate_expression(condition)->try_get<bool>()) {
+                evaluate_expression(block);
+            } else if (children.size() >= 3) {
+                const auto& else_block = children[2];
+                evaluate_expression(else_block);
+            }
+            return std::make_shared<UndefinedValue>();
+        }
+
         case AstNodeType::WHILE: {
             assert(children.size() >= 2);
 
