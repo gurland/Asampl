@@ -55,3 +55,9 @@ Function make_asampl_function(std::function<R(Args...)> func) {
         }
     };
 }
+
+template< typename R, typename... Args >
+Function make_asampl_function(R(*func)(Args...)) {
+    std::function<R(Args...)> stdfunc{func};
+    return make_asampl_function(stdfunc);
+}
