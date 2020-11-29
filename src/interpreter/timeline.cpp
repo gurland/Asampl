@@ -12,7 +12,7 @@
 
 #define FCOMP(f1, f2) std::abs((f1) - (f2)) < 0.001
 
-Timeline::Timeline(Program *program) : 
+Timeline::Timeline(Program *program) :
     program_(program)
 {
 }

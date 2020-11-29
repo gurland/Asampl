@@ -14,7 +14,7 @@ struct DwnldData {
 
 class Program;
 
-class Timeline {  
+class Timeline {
 public:
     Timeline(Program *program);
     Timeline(const Timeline&) = delete;
@@ -27,6 +27,6 @@ private:
     Program *program_;
 private:
     std::unordered_map<ActiveDownload *, DwnldData> downloads_data_;
-    
+
     float cur_time = 0;
 };

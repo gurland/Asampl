@@ -343,7 +343,7 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 [](AstNodeType t) {
                     return t == AstNodeType::TIMELINE_EXPR ||
                            t == AstNodeType::TIMELINE_AS ||
-                           t == AstNodeType::TIMELINE_UNTIL; 
+                           t == AstNodeType::TIMELINE_UNTIL;
                 },
                 AstNodeType::BLOCK
             );

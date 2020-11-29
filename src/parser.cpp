@@ -1066,7 +1066,7 @@ static Tree *parentheses(Parser *parser) {
 	parser->increase_level();
 	if (!accept(parser, TokenType::LEFT_BRACKET)) return nullptr;
 	Tree *exprNode = expr(parser);
-	expect(parser, TokenType::RIGHT_BRACKET); // @todo mb 
+	expect(parser, TokenType::RIGHT_BRACKET); // @todo mb
 	return exprNode;
 }
 static Tree *fn_call(Parser *parser) {
