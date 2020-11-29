@@ -8,6 +8,7 @@
 
 #include "tree.h"
 #include "interpreter/handler.h"
+#include "interpreter/timeline.h"
 #include "interpreter/exception.h"
 #include "interpreter/value.h"
 #include "interpreter/function.h"
@@ -31,6 +32,7 @@ public:
 
 	void add_variable(const std::string& id, const AstNode *data_node);
     void add_function(const std::string& id, Function func);
+    ActiveDownload *add_download(const std::string& _source_node, const std::string& _handler_node);
 
     void load_stdlib();
 
@@ -47,18 +49,18 @@ private:
 	void execute_actions(const Tree *ast_tree);
 
     ValuePtr evaluate_expression(const Tree* ast_tree);
-private:
 
-
-	//bool is_value(AstNodeType t);
 private:
 	std::unordered_map<std::string, ValuePtr> variables_;
     std::unordered_map<std::string, std::unique_ptr<Handler>> handlers_;
     std::unordered_map<std::string, Function> functions_;
     std::map<std::pair<std::string, std::string>, ActiveDownload> active_downloads_;
     std::unordered_map<std::string, std::string> sources_;
-
 	std::unordered_map<std::string, std::type_index> types_;
+
+	std::shared_ptr<Timeline> active_timeline_;
+private:
+	friend class Timeline;
 };
 
 inline void Program::add_variable(const std::string& id, const AstNode *data_node) {

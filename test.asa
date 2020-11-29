@@ -1,17 +1,31 @@
 PROGRAM PlayAndSaveVideo {
     Handlers {
-        FFMpeg from 'ffmpeg-handler';
+        ffmpeg from './build/handlers/ffmpeg-handler/ffmpeg-handler';
+        num_stream from './build/handlers/number-stream-handler/number-stream-handler';
     }
     Sources {
-        Video1 from 'test.ogv';
+        video from 'data/test.ogv';
+        red_stream from 'data/r.txt';
+        green_stream from 'data/g.txt';
+        blue_stream from 'data/b.txt';
     }
     Elements {
 	    img = 0;
+        rval = 0;
+        gval = 0;
+        bval = 0;
     }
     Actions {
-        while (!is_undefined(img)) {
-            Download img from Video1 with FFMpeg;
+        Timeline (
+            Download rval from red_stream with num_stream;
+            Download gval from green_stream with num_stream;
+            Download bval from blue_stream with num_stream;
+            Download img from video with ffmpeg;
+        ) {
             if (!is_undefined(img)) {
+                change_color_channel(0, rval, img);
+                change_color_channel(1, gval, img);
+                change_color_channel(2, bval, img);
                 show_image(img);
             }
         }

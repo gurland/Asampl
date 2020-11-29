@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "interpreter.h"
+#include "interpreter/timeline.h"
 #include "matcher.h"
 
 #include <iomanip>
@@ -7,6 +8,7 @@
 #include <cmath>
 #include <ctime>
 #include <fstream>
+#include <future>
 
 #include <opencv2/opencv.hpp>
 
@@ -281,6 +283,8 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 std::vector<ValuePtr> arguments;
                 arguments.reserve(arglist->get_children().size());
                 for (const auto& child : arglist->get_children()) {
+                    if (evaluate_expression(child)->is_undefined())
+                        return std::make_shared<UndefinedValue>();
                     arguments.emplace_back(evaluate_expression(child));
                 }
 
@@ -329,20 +333,45 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 throw InterpreterException("Variable with id '" + target + "' does not exist");
             }
 
-            const auto& source_node = children[1]->get_node()->value_;
-            const auto& handler_node = children[2]->get_node()->value_;
+            auto *adwnld = add_download(children[1]->get_node()->value_, children[2]->get_node()->value_);
+            variable_it->second = adwnld->download_frame_val();
+            return std::make_shared<UndefinedValue>();
+        }
+        case AstNodeType::TIMELINE: {
+            auto matches = ast_tree->match(
+                AstNodeType::TIMELINE,
+                [](AstNodeType t) {
+                    return t == AstNodeType::TIMELINE_EXPR ||
+                           t == AstNodeType::TIMELINE_AS ||
+                           t == AstNodeType::TIMELINE_UNTIL; 
+                },
+                AstNodeType::BLOCK
+            );
+            assert(matches);
 
-            const auto& source_file = sources_.at(source_node);
+            active_timeline_ = std::make_shared<Timeline>(this);
+            evaluate_expression(children[0]);
 
-            auto active_it = active_downloads_.find(std::make_pair(source_file, handler_node));
-            if (active_it == active_downloads_.end()) {
-                Handler* handler = handlers_.at(handler_node).get();
-                active_it = active_downloads_.emplace(
-                    std::pair(source_node, handler_node),
-                    ActiveDownload{source_file, handler}).first;
+            auto res = false;
+            do {
+                res = active_timeline_->prepare_iteration();
+                evaluate_expression(children[1]);
+            } while(res);
+            return std::make_shared<UndefinedValue>();
+        }
+        case AstNodeType::TIMELINE_EXPR: {
+            for (const auto& child : children) {
+                const auto& cchildren = child->get_children();
+                const auto& target = cchildren[0]->get_node()->value_;
+                auto variable_it = variables_.find(target);
+                if (variable_it == variables_.end()) {
+                    throw InterpreterException("Variable with id '" + target + "' does not exist");
+                }
+                variable_it->second = std::make_shared<UndefinedValue>();
+
+                auto *adwnld = add_download(cchildren[1]->get_node()->value_, cchildren[2]->get_node()->value_);
+                active_timeline_->add_download(adwnld, target);
             }
-
-            variable_it->second = active_it->second.download_frame();
             return std::make_shared<UndefinedValue>();
         }
 
@@ -350,6 +379,7 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             throw InterpreterException("Unimplemented operation");
     }
 }
+
 
 #undef BINARY_EXPR
 #undef UNARY_EXPR
@@ -360,6 +390,20 @@ void Program::load_stdlib() {
     }
 }
 
+ActiveDownload *Program::add_download(const std::string& _source_node, const std::string& _handler_node) {
+	const auto& source_node = _source_node;
+	const auto& handler_node = _handler_node;
+
+	const auto& source_file = sources_.at(source_node);
+	auto active_it = active_downloads_.find(std::make_pair(source_file, handler_node));
+	if (active_it == active_downloads_.end()) {
+		Handler* handler = handlers_.at(handler_node).get();
+		active_it = active_downloads_.emplace(
+			std::pair(source_node, handler_node),
+			ActiveDownload{source_file, handler}).first;
+	}
+	return &active_it->second;
+}
 
 static bool is_value(AstNodeType t) {
 	return

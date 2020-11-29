@@ -13,6 +13,8 @@
 #include "interpreter/image.h"
 #include "interpreter/value.h"
 
+class TimeLine;
+
 class Handler {
 public:
     Handler(const std::string& path);
@@ -26,7 +28,7 @@ public:
     std::function<AsaValueType(AsaHandler*)> get_type;
     std::function<AsaData*(AsaHandler*)> download;
     std::function<AsaData*(AsaHandler*)> upload;
-    std::function<void(AsaHandler*, AsaData*)> free;
+    std::function<void(AsaHandler*, const AsaData*)> free;
 
 protected:
     dynalo::library library_;
@@ -37,15 +39,19 @@ struct ActiveDownload {
     AsaHandler* handler_ctx;
     Handler* handler;
 
+    ActiveDownload() {};
     ActiveDownload(const std::string& filename, Handler* handler);
     ~ActiveDownload();
 
-    ActiveDownload(const ActiveDownload&) = delete;
+    // ActiveDownload(const ActiveDownload&) = delete;
     ActiveDownload(ActiveDownload&& other);
 
     bool fill_data();
-    ValuePtr download_frame();
+    ValuePtr download_frame_val();
 
 private:
+    const AsaData *download_frame();
     ValuePtr frame_to_value(const AsaData* data);
+private:
+    friend class Timeline;
 };

@@ -18,7 +18,9 @@ void Tree::print(std::ostream& file, const std::string& indent, bool root, int l
 		file << "|-";
 		new_indent = indent + "|*";
 	}
-
+	if (this->node_->value_ == "func") {
+		int il = 0;
+	}
 	file << this->node_->value_ + "\n";
 	size_t count = this->children_.size();
 	for (int i = 0; i < count; ++i) {

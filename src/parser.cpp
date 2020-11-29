@@ -123,7 +123,6 @@ static bool eoi(Parser *parser) {
 
 static Tree *accept(Parser *parser, TokenType type) {
 	if (eoi(parser)) return nullptr;
-	//Token *token = Iterator_value(parser->tokens);
 	Token lexem = parser->get_iterator_value();
 
 	if (lexem.get_type() == type) {
@@ -242,7 +241,7 @@ static Tree *NUMBER(Parser *parser) {
 
 static Tree *program(Parser *parser) {
 	parser->increase_level();
-	if (!accept(parser, TokenType::PROGRAM) ||
+	if (!expect(parser, TokenType::PROGRAM) ||
 		!expect(parser, TokenType::NAME) ||
 		!expect(parser, TokenType::LEFT_BRACE)) return nullptr;
 
@@ -770,13 +769,7 @@ static Tree *print_action(Parser *parser) {
 }
 
 static Tree *if_action(Parser *parser) {
-	/*parser->increase_level();
-	return accept(parser, TokenType::IF)
-		&& expect(parser, TokenType::LEFT_BRACKET)
-		&& expr(parser)
-		&& expect(parser, TokenType::RIGHT_BRACKET)
-		&& block_actions(parser)
-		&& (accept(parser, TokenType::ELSE) ? block_actions(parser) : true);*/
+
 	parser->increase_level();
 
 	if (!accept(parser, TokenType::IF)
@@ -813,24 +806,8 @@ static Tree *if_action(Parser *parser) {
 	return ifNode;
 }
 
-/*
-static bool cases_action(Parser *parser) {
-	return accept(parser, TokenType::CASE)
-		&& expr(parser)
-		&& accept(parser, TokenType::OF)
-		&&
-
-}*/
-
 static Tree *substitution_action(Parser *parser) {
 	parser->increase_level();
-	/*return accept(parser, TokenType::SUBSTITUTE)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::FOR)
-		&& expect(parser, TokenType::NAME)
-		&& expect(parser, TokenType::WHEN)
-		&& expr(parser)
-		&& expect(parser, TokenType::SEMICOLON);*/
 
 	if (!accept(parser, TokenType::SUBSTITUTE)) return nullptr;
 
@@ -859,11 +836,6 @@ static Tree *substitution_action(Parser *parser) {
 }
 
 static Tree *timeline_action(Parser *parser) {
-
-	/*parser->increase_level();
-	return accept(parser, TokenType::TIMELINE)
-		&& timeline_overload(parser)
-		&& block_actions(parser);*/
 	if (!accept(parser, TokenType::TIMELINE)) return nullptr;
 
 	Tree *exprNode = timeline_overload(parser);
@@ -895,44 +867,18 @@ static Tree *timeline_overload(Parser *parser) {
 
 static Tree *timeline_expr(Parser *parser) {
 	parser->increase_level();
-	/*return accept(parser, TokenType::LEFT_BRACKET)
-		&& expr(parser)
-		&& expect(parser, TokenType::COLON)
-		&& expr(parser)
-		&& expect(parser, TokenType::COLON)
-		&& expr(parser)
-		&& expect(parser, TokenType::RIGHT_BRACKET);*/
+
 	if (!accept(parser, TokenType::LEFT_BRACKET)) return nullptr;
 
-	Tree *exprNode1 = expr(parser);
-	if (exprNode1 == nullptr) {
-		return nullptr;
-	}
-	if (!expect(parser, TokenType::COLON)) return nullptr;
-
-	Tree *exprNode2 = expr(parser);
-	if (exprNode2 == nullptr) {
-		return nullptr;
-	}
-	if (!expect(parser, TokenType::COLON)) return nullptr;
-
-	Tree *exprNode3 = expr(parser);
-	if (exprNode3 == nullptr) {
-		return nullptr;
-	}
+	Tree *timeline_node = new Tree(new AstNode(AstNodeType::TIMELINE_EXPR, "timeline_expr"));
+	ebnf_sequence(parser, timeline_node, download_action);
 	if (!expect(parser, TokenType::RIGHT_BRACKET)) return nullptr;
-
-	Tree *timelineNode = new Tree(new AstNode(AstNodeType::TIMELINE_EXPR, "timeline_expr"));
-	timelineNode->add_child(exprNode1);
-	timelineNode->add_child(exprNode2);
-	timelineNode->add_child(exprNode3);
-	return timelineNode;
+	return timeline_node;
 }
 
 static Tree *timeline_as(Parser *parser) {
 	parser->increase_level();
-	/*return accept(parser, TokenType::AS)
-		&& expect(parser, TokenType::NAME);*/
+
 	if (!accept(parser, TokenType::AS)) return nullptr;
 
 	Tree *idNode = ID(parser);
@@ -946,8 +892,7 @@ static Tree *timeline_as(Parser *parser) {
 
 static Tree *timeline_until(Parser *parser) {
 	parser->increase_level();
-	/*return accept(parser, TokenType::UNTIL)
-		&& expr(parser);*/
+
 	if (!accept(parser, TokenType::UNTIL)) return nullptr;
 
 	Tree *exprNode = expr(parser);
@@ -967,11 +912,7 @@ static Tree *expr(Parser *parser) {
 }
 
 static Tree *expr_st(Parser *parser) {
-	/*parser->increase_level();
-	if (expr(parser)) {
-		return expect(parser, TokenType::SEMICOLON);
-	}
-	return accept(parser, TokenType::SEMICOLON);*/
+
 	parser->increase_level();
 	Tree *exprNode = expr(parser);
 
