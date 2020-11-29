@@ -33,23 +33,10 @@ namespace {
             throw InterpreterException("Invalid channel value");
         }
 
-        const int cols = mat.cols;
-        const int rows = mat.rows;
-        const int step = mat.channels();
+        cv::Scalar channel_scale(1.0, 1.0, 1.0);
+        channel_scale[channel] = value;
 
-        for (int y = 0; y < rows; y++) {
-            uint8_t *p_row = mat.ptr(y) + static_cast<size_t>(channel);
-            uint8_t *row_end = p_row + cols*step;
-            for (; p_row != row_end; p_row += step) {
-                *p_row *= value;
-            }
-        }
-        // for(int y=0; y < rows; ++y) {
-        //     for(int x=0; x < cols; ++x) {
-        //         cv::Vec3b &color = mat.at<cv::Vec3b>(y,x);
-        //         color[chnnl] += val;
-        //     }
-        // }
+        cv::multiply(mat, channel_scale, mat);
     }
 }
 
