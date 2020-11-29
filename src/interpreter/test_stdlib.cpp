@@ -12,7 +12,7 @@ namespace {
 
     void show_image(AsaImage image) {
         cv::imshow("", image.data);
-        cv::waitKey(33);
+        cv::waitKey(43);
     }
 
     void dbg(ValuePtr value) {
@@ -27,27 +27,21 @@ namespace {
 
     }
 
-    void change_color_channel(ValuePtr channel, ValuePtr value, AsaImage image) {
-        if (value->get_type() != ValueType::NUMBER) {
-            throw InterpreterException("Invalid value");
-        }
-        uint8_t val = static_cast<uint8_t>(value->try_get<double>());
+    void change_color_channel(double channel, double value, AsaImage image) {
         cv::Mat &mat = image.data;
-        if (channel->get_type() != ValueType::NUMBER) {
+        if (mat.channels() < channel) {
             throw InterpreterException("Invalid channel value");
         }
-        uint8_t chnnl = static_cast<uint8_t>(channel->try_get<double>());
-        if (mat.channels() < chnnl) {
-            throw InterpreterException("Invalid channel value");
-        }
+
         const int cols = mat.cols;
         const int rows = mat.rows;
         const int step = mat.channels();
+
         for (int y = 0; y < rows; y++) {
-            uint8_t *p_row = mat.ptr(y) + chnnl; 
+            uint8_t *p_row = mat.ptr(y) + static_cast<size_t>(channel);
             uint8_t *row_end = p_row + cols*step;
             for (; p_row != row_end; p_row += step) {
-                *p_row += val;
+                *p_row *= value;
             }
         }
         // for(int y=0; y < rows; ++y) {
