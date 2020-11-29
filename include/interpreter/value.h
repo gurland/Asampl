@@ -30,6 +30,10 @@ public:
 
     static ValuePtr from_literal(const AstNode* data_node);
 
+    virtual bool is_undefined() {
+        return false;
+    }
+
     template<typename T>
     T& try_get();
 protected:
@@ -94,6 +98,10 @@ public:
 
     ValuePtr clone() const override {
         return std::make_shared<UndefinedValue>();
+    }
+
+    virtual bool is_undefined() override {
+        return true;
     }
 };
 

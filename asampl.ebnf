@@ -1,95 +1,94 @@
-Влад Песчанский, [01.05.19 21:02]
+Asampl 
 
 program = 'Program', ID, '{',
-    [ libraries section ],
-    [ handlers section ],
-    [ renderers section ],
-    [ sources section ],
-    [ sets section ],
-    [ elements section ],
-    [ tuples section ],
-    [ aggregates section ],
-    actions section,
+    [ libraries_section ],
+    [ handlers_section ],
+    [ renderers_section ],
+    [ sources_section ],
+    [ sets_section ],
+    [ elements_section ],
+    [ tuples_section ],
+    [ aggregates_section ],
+    actions_section,
 '}';
 
 //Libraries
 
-libraries section = 'Libraries', '{', {library import}, '}';
+libraries_section = 'Libraries', '{', {library_import}, '}';
 
-library import = ID, ";";
+library_import = ID, ";";
 
+handlers_section = 'Handlers', '{', {item_import}, '}';
 
-handlers section = 'Handlers', '{', {item import}, '}';
+renderers_section = 'Renderers', '{', {item_import}, '}';
 
-renderers section = 'Renderers', '{', {item import}, '}';
+sources_section = 'Sources', '{', {item_import}, '}';
 
-sources section = 'Sources', '{', {item import}, '}';
+sets_section ='Sets', '{', {item_import}, '}';
 
-sets section ='Sets', '{', {item import}, '}';
-
-item import = ID, "from", expr, ";";
+item_import = ID, "from", expr, ";";
 
 
 //Elements
-elements section = 'Elements', '{', {element declaration}, '}';
+elements_section = 'Elements', '{', {element_declaration}, '}';
 
-element declaration = ID, assign, data, ";";
+element_declaration = ID, assign, data, ";";
 
 //Tuples
-tuples section = 'Tuples', '{',
-    {tuples section declaration},
+tuples_section = 'Tuples', '{',
+    {tuples_section_declaration},
 '}';
 
-tuples section declaration =
+tuples_section_declaration =
     ID, assign , data,';';
 
 //Aggregates
-aggregates section =  'Aggregates', '{', {aggr_decl}, '}';
+aggregates_section =  'Aggregates', '{', {aggr_decl}, '}';
 
 aggr_decl = ID, assign , data ;
 
 //Actions
-actions section = 'Actions',"{", actions, "}";
+actions_section = 'Actions',"{", {action}, "}";
 
-action =  block_actions 
+action = block_actions
 	| expr_st
-	| sequence action 
-	| download action 
-	| upload action 
-	| render action
-	| if action 
-	| cases action 
-	| timeline action 
-	| substitution action  ;
+	| sequence_action
+	| download_action
+	| upload_action
+	| render_action
+	| if_action
+	| cases_action
+	| timeline_action
+	| substitution_action;
 
-block_actions = "{", actions, "}";
+block_actions = "{", {action}, "}";
 
 
-sequence action = 'Sequence','{', actions,'}'; 
+sequence_action = 'Sequence','{', {action},'}';
 
-download action = 'Download', stream_names,
+download_action = 'Download', stream_names,
     'From', source_name,
     'With', handler_name,
 ';';
 
-upload action = 'Upload', stream_names,
+upload_action = 'Upload', stream_names,
     'To', source_name,
     'With', handler_name,
 ';';
 
 
 
-render action = 'Render', stream names, 'With', expr, ';';
+render_action = 'Render', stream_names, 'With', expr, ';';
 
 
 
-timeline action = 'Timeline', timeline overload, block_actions
+timeline_action = 'Timeline', timeline_overload, block_actions
 
 
-timeline overload = timeline expr
-    | timeline as
-    | timeline until
-    | timeline while
+timeline_overload = timeline_expr
+    | timeline_as
+    | timeline_until
+    | timeline_while
 
 timeline_expr = '(',expr, ':', expr, ':', expr,')';
 timeline_as = 'As', ID ;
@@ -97,18 +96,18 @@ timeline_until = 'UNTIL', expr ;
 timeline_while =  'WHILE', expr ;
 
 ifAction = 'If', condition,
-    'Then', actions block,
-    [else action] ;
-else action = 'Else', actions block;
+    'Then', actions_block,
+    [else_action] ;
+else_action = 'Else', actions_block;
 
-cases action = 'Case', expression, 'Of',a
-    cases branch, {cases branch},
-    [else action] ;
+cases_action = 'Case', expression, 'Of',a
+    cases_branch, {cases_branch},
+    [else_action] ;
 
-cases branch = scalar value, ':', actions block;
+cases_branch = scalar_value, ':', actions_block;
 
 
-substitution action = ' ', substitution with, 'For', substitution what,'When', condition,';';
+substitution_action = ' ', substitution with, 'For', substitution what,'When', condition,';';
 
 expr_st = [expr], ";";  
 block_st = "{", {st}, "}"; 

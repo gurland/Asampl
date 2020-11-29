@@ -77,7 +77,18 @@ bool ActiveDownload::fill_data() {
     return true;
 }
 
-ValuePtr ActiveDownload::download_frame() {
+ValuePtr ActiveDownload::download_frame_val() {
+    const AsaData *frame = download_frame();
+    if (frame) {
+        auto ret = frame_to_value(frame);
+        handler->free(handler_ctx, frame);
+        return ret;
+    } else {
+        return std::make_shared<UndefinedValue>();
+    }
+}
+
+const AsaData *ActiveDownload::download_frame() {
     fill_data();
 
     while (true) {
@@ -94,12 +105,10 @@ ValuePtr ActiveDownload::download_frame() {
                 if (fill_data()) {
                     continue;
                 } else {
-                    return std::make_shared<UndefinedValue>();
+                    return nullptr;
                 }
             default: {
-                auto ret = frame_to_value(frame);
-                handler->free(handler_ctx, frame);
-                return ret;
+                return frame;
             }
         }
     }
@@ -120,6 +129,7 @@ ValuePtr ActiveDownload::frame_to_value(const AsaData* frame) {
         }
 
         default:
-            throw InterpreterException("Handler type not supported");
+            return std::make_shared<UndefinedValue>();
+            // throw InterpreterException("Handler type not supported");
     }
 }
