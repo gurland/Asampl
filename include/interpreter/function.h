@@ -15,10 +15,10 @@ using Function = std::function<ValuePtr(const std::vector<ValuePtr>&)>;
 
 template< typename T >
 auto convert_argument(ValuePtr& t) {
-    if constexpr (std::is_same_v<T, ValuePtr>) {
+    if constexpr (std::is_same_v<std::decay_t<T>, ValuePtr>) {
         return std::tie(t);
     } else {
-        return std::tie(t->template try_get<T>());
+        return std::tie(t->template try_get<std::decay_t<T>>());
     }
 }
 

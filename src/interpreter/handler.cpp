@@ -128,6 +128,12 @@ ValuePtr ActiveDownload::frame_to_value(const AsaData* frame) {
             return std::make_shared<Value<double>>(value);
         }
 
+        case ASA_STRING: {
+            auto string_frame = reinterpret_cast<AsaStringData*>(frame->data);
+            std::string value{string_frame->data, string_frame->data + string_frame->length};
+            return std::make_shared<Value<std::string>>(std::move(value));
+        }
+
         default:
             return std::make_shared<UndefinedValue>();
             // throw InterpreterException("Handler type not supported");

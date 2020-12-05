@@ -38,6 +38,10 @@ namespace {
 
         cv::multiply(mat, channel_scale, mat);
     }
+
+    bool string_contains(const std::string& s, const std::string& sample) {
+        return s.find(sample) != std::string::npos;
+    }
 }
 
 std::vector<std::pair<std::string, Function>> get_stdlib_functions() {
@@ -47,6 +51,7 @@ std::vector<std::pair<std::string, Function>> get_stdlib_functions() {
         std::make_pair("dbg", make_asampl_function(dbg)),
         std::make_pair("is_undefined", make_asampl_function(is_undefined)),
         std::make_pair("change_color_channel", make_asampl_function(change_color_channel)),
-        std::make_pair("change_color", make_asampl_function(change_color))
+        std::make_pair("change_color", make_asampl_function(change_color)),
+        std::make_pair("string_contains", make_asampl_function(string_contains))
     };
 }
