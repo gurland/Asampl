@@ -18,6 +18,9 @@ PROGRAM PlayAndSaveVideo {
         ) {
             dbg(str);
             dbg(num);
+            if (string_contains(str, 'yo')) {
+                dbg('AAAAAAAAAAAAAAAAAAAAAAA');
+            }
             dbg('===========');
         }
     }
