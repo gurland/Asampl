@@ -1,6 +1,6 @@
 PROGRAM PlayAndSaveVideo {
     Handlers {
-        strings from 'string-handler';
+        strings from 'string-stream-handler';
         numbers from 'number-stream-handler';
     }
     Sources {
