@@ -868,11 +868,19 @@ static Tree *timeline_overload(Parser *parser) {
 static Tree *timeline_expr(Parser *parser) {
 	parser->increase_level();
 
-	if (!accept(parser, TokenType::LEFT_BRACKET)) return nullptr;
+	if (!accept(parser, TokenType::FROM)) return nullptr;
+	Tree *start = expr(parser);
+
+	if (!accept(parser, TokenType::TO)) return nullptr;
+	Tree *end = expr(parser);
+
+	if (!accept(parser, TokenType::LEFT_SQUARE_BRACKET)) return nullptr;
 
 	Tree *timeline_node = new Tree(new AstNode(AstNodeType::TIMELINE_EXPR, "timeline_expr"));
+	timeline_node->add_child(start);
+	timeline_node->add_child(end);
 	ebnf_sequence(parser, timeline_node, download_action);
-	if (!expect(parser, TokenType::RIGHT_BRACKET)) return nullptr;
+	if (!expect(parser, TokenType::RIGHT_SQUARE_BRACKET)) return nullptr;
 	return timeline_node;
 }
 

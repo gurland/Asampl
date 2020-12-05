@@ -12,6 +12,17 @@
 
 #define FCOMP(f1, f2) std::abs((f1) - (f2)) < 0.001
 
+#define DOWNLOAD_FIRST_FRAME(dwnld, start_time)     \
+    ({                                              \
+        auto *__frame = dwnld->download_frame();    \
+        while(true) {                               \
+            if (__frame->time >= start_time)        \
+                break;                              \
+            __frame = dwnld->download_frame();      \
+        }                                           \
+        __frame;                                    \
+    })
+
 Timeline::Timeline(Program *program) :
     program_(program)
 {
@@ -23,27 +34,21 @@ void Timeline::add_download(ActiveDownload *dwnld, const std::string &var_id) {
 
     DwnldData ddata{
         .var_id = var_id,
-        .cur_frame = dwnld->download_frame(),
+        .cur_frame = DOWNLOAD_FIRST_FRAME(dwnld, start),
         .next_frame = dwnld->download_frame()
     };
     downloads_data_.emplace(dwnld, ddata);
 }
 
 bool Timeline::prepare_iteration() {
+    if (!is_configured()) return false;
+
     cur_time = std::numeric_limits<float>::max();
     for (auto &dwnld_data : downloads_data_) {
-        // auto dwnld = dwnld_data.first;
-        // auto frame = dwnld_data.second.frame;
         auto &cur_frame = dwnld_data.second.cur_frame;
-        // if (!cur_frame) {
-        //     cur_frame = dwnld_data.second.next_frame;
-        //     dwnld_data.second.next_frame = dwnld->download_frame();
-        // }
         if (cur_frame && cur_frame->time < cur_time) {
             cur_time = cur_frame->time;
         }
-        // if (cur_frame != frame)
-        //     dwnld_data.second.cur_frame = frame;
     }
 
     bool result = false;
@@ -67,7 +72,11 @@ bool Timeline::prepare_iteration() {
         }
         if (next_frame && (!cur_frame || next_frame->time <= cur_time)) {
             cur_frame = dwnld_data.second.next_frame;
-            dwnld_data.second.next_frame = dwnld->download_frame();
+            auto *tmp = dwnld->download_frame();
+            if (tmp && tmp->time <= end)
+                dwnld_data.second.next_frame = tmp;
+            else
+                dwnld_data.second.next_frame = nullptr;
         }
         if (cur_frame || next_frame) {
             result = true;
