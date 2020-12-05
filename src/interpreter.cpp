@@ -360,9 +360,13 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             return std::make_shared<UndefinedValue>();
         }
         case AstNodeType::TIMELINE_EXPR: {
-            active_timeline_->start = evaluate_expression(children[0])->try_get<double>();
-            active_timeline_->end = evaluate_expression(children[1])->try_get<double>();
-            for (auto it = children.begin() + 2; it != children.end(); ++it) {
+            int offset = 0;
+            if (children[0]->get_node()->type_ != AstNodeType::DOWNLOAD) {
+                active_timeline_->start = evaluate_expression(children[0])->try_get<double>();
+                active_timeline_->end = evaluate_expression(children[1])->try_get<double>();
+                offset = 2;
+            }
+            for (auto it = children.begin() + offset; it != children.end(); ++it) {
                 const auto& child = *it;
                 const auto& gchildren = child->get_children();
                 const auto& target = gchildren[0]->get_node()->value_;

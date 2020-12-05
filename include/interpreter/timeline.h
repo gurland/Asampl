@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include <stdbool.h>
+#include <optional>
 
 #include "interpreter/handler.h"
 
@@ -24,10 +25,8 @@ public:
 
     bool prepare_iteration();
 
-    bool is_configured();
-
-    double start = -1;
-    double end = -1;
+    std::optional<double> start;
+    std::optional<double> end;
 private:
     Program *program_;
 private:
@@ -35,7 +34,3 @@ private:
 
     double cur_time = 0;
 };
-
-inline bool Timeline::is_configured() {
-    return start >= 0 && end >= 0;
-}

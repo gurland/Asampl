@@ -18,7 +18,7 @@ PROGRAM PlayAndSaveVideo {
         end = 15;
     }
     Actions {
-        Timeline from start to end [
+        Timeline [
             Download rval from red_stream with num_stream;
             Download gval from green_stream with num_stream;
             Download bval from blue_stream with num_stream;

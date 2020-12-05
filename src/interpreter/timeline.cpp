@@ -34,15 +34,13 @@ void Timeline::add_download(ActiveDownload *dwnld, const std::string &var_id) {
 
     DwnldData ddata{
         .var_id = var_id,
-        .cur_frame = DOWNLOAD_FIRST_FRAME(dwnld, start),
+        .cur_frame = DOWNLOAD_FIRST_FRAME(dwnld, start.value_or(0)),
         .next_frame = dwnld->download_frame()
     };
     downloads_data_.emplace(dwnld, ddata);
 }
 
 bool Timeline::prepare_iteration() {
-    if (!is_configured()) return false;
-
     cur_time = std::numeric_limits<float>::max();
     for (auto &dwnld_data : downloads_data_) {
         auto &cur_frame = dwnld_data.second.cur_frame;
@@ -73,7 +71,7 @@ bool Timeline::prepare_iteration() {
         if (next_frame && (!cur_frame || next_frame->time <= cur_time)) {
             cur_frame = dwnld_data.second.next_frame;
             auto *tmp = dwnld->download_frame();
-            if (tmp && tmp->time <= end)
+            if (tmp && (!end || tmp->time <= end))
                 dwnld_data.second.next_frame = tmp;
             else
                 dwnld_data.second.next_frame = nullptr;
