@@ -360,16 +360,23 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             return std::make_shared<UndefinedValue>();
         }
         case AstNodeType::TIMELINE_EXPR: {
-            for (const auto& child : children) {
-                const auto& cchildren = child->get_children();
-                const auto& target = cchildren[0]->get_node()->value_;
+            int offset = 0;
+            if (children[0]->get_node()->type_ != AstNodeType::DOWNLOAD) {
+                active_timeline_->start = evaluate_expression(children[0])->try_get<double>();
+                active_timeline_->end = evaluate_expression(children[1])->try_get<double>();
+                offset = 2;
+            }
+            for (auto it = children.begin() + offset; it != children.end(); ++it) {
+                const auto& child = *it;
+                const auto& gchildren = child->get_children();
+                const auto& target = gchildren[0]->get_node()->value_;
                 auto variable_it = variables_.find(target);
                 if (variable_it == variables_.end()) {
                     throw InterpreterException("Variable with id '" + target + "' does not exist");
                 }
                 variable_it->second = std::make_shared<UndefinedValue>();
 
-                auto *adwnld = add_download(cchildren[1]->get_node()->value_, cchildren[2]->get_node()->value_);
+                auto *adwnld = add_download(gchildren[1]->get_node()->value_, gchildren[2]->get_node()->value_);
                 active_timeline_->add_download(adwnld, target);
             }
             return std::make_shared<UndefinedValue>();

@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include <stdbool.h>
+#include <optional>
 
 #include "interpreter/handler.h"
 
@@ -23,10 +24,13 @@ public:
     void add_download(ActiveDownload *dwnld, const std::string &var_id);
 
     bool prepare_iteration();
+
+    std::optional<double> start;
+    std::optional<double> end;
 private:
     Program *program_;
 private:
     std::unordered_map<ActiveDownload *, DwnldData> downloads_data_;
 
-    float cur_time = 0;
+    double cur_time = 0;
 };

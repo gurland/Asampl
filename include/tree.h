@@ -25,6 +25,7 @@ public:
 	void print(std::ostream &file, const std::string &indent = "", bool root = true, int last = 1);
 
 	static void free(Tree *tree) {
+		if (!tree) return;
 		children_t children = tree->children_;
 		delete tree;
 		for (auto child : children) {
