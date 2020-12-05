@@ -6,11 +6,18 @@
 
 typedef void AsaHandler;
 
+#define HANDLER_INTERFACE_VERSION_MAJOR 1
+
 typedef struct {
     uint16_t width;
     uint16_t height;
     uint8_t frame[];
 } AsaVideoData;
+
+typedef struct {
+    uint32_t length;
+    char data[];
+} AsaStringData;
 
 typedef enum {
     ASA_STATUS_NORMAL,

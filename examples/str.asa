@@ -1,0 +1,24 @@
+PROGRAM PlayAndSaveVideo {
+    Handlers {
+        strings from 'string-handler';
+        numbers from 'number-stream-handler';
+    }
+    Sources {
+        strings from 'data/strings.txt';
+        numbers from 'data/r.txt';
+    }
+    Elements {
+	    str = '';
+        num = 0;
+    }
+    Actions {
+        Timeline (
+            Download str from strings with strings;
+            Download num from numbers with numbers;
+        ) {
+            dbg(str);
+            dbg(num);
+            dbg('===========');
+        }
+    }
+}

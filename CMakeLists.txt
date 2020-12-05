@@ -13,7 +13,7 @@ else()
     find_package(OPENCV REQUIRED NAMES OpenCV)
 endif()
 
-add_subdirectory(deps/dynalo)
+add_subdirectory(deps/dynalo EXCLUDE_FROM_ALL)
 
 add_library(asampl-interface INTERFACE)
 target_include_directories(asampl-interface INTERFACE include)
@@ -30,3 +30,5 @@ file(GLOB HANDLERS handlers/*)
 foreach(HANDLER_DIR ${HANDLERS})
     add_subdirectory(${HANDLER_DIR})
 endforeach()
+
+install(TARGETS asampl RUNTIME DESTINATION bin)
