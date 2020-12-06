@@ -42,6 +42,24 @@ namespace {
     bool string_contains(const std::string& s, const std::string& sample) {
         return s.find(sample) != std::string::npos;
     }
+
+    double width(const AsaImage& img) {
+        return img.data.cols;
+    }
+
+    double height(const AsaImage& img) {
+        return img.data.rows;
+    }
+
+    AsaImage overlay_image(AsaImage& background, const AsaImage& img, double x, double y) {
+        img.data.copyTo(background.data(cv::Rect(x, y, img.data.cols, img.data.rows)));
+        return background;
+    }
+
+    AsaImage load_image(const std::string& path)
+    {
+        return { cv::imread(path) };
+    }
 }
 
 std::vector<std::pair<std::string, Function>> get_stdlib_functions() {
@@ -52,6 +70,10 @@ std::vector<std::pair<std::string, Function>> get_stdlib_functions() {
         std::make_pair("is_undefined", make_asampl_function(is_undefined)),
         std::make_pair("change_color_channel", make_asampl_function(change_color_channel)),
         std::make_pair("change_color", make_asampl_function(change_color)),
-        std::make_pair("string_contains", make_asampl_function(string_contains))
+        std::make_pair("string_contains", make_asampl_function(string_contains)),
+        std::make_pair("width", make_asampl_function(width)),
+        std::make_pair("height", make_asampl_function(height)),
+        std::make_pair("overlay_image", make_asampl_function(overlay_image)),
+        std::make_pair("load_image", make_asampl_function(load_image))
     };
 }
