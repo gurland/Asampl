@@ -181,9 +181,14 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 left->try_get<double>() + right->try_get<double>());
         }
         case AstNodeType::SUB: {
-            BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() - right->try_get<double>());
+            if (children.size() == 1) {
+                UNARY_EXPR;
+                return std::make_shared<Value<double>>(-operand->try_get<double>());
+            } else {
+                BINARY_EXPR;
+                return std::make_shared<Value<double>>(
+                    left->try_get<double>() - right->try_get<double>());
+            }
         }
         case AstNodeType::MUL: {
             BINARY_EXPR;

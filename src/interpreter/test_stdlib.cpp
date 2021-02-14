@@ -10,7 +10,7 @@ namespace {
         }
 
         if (index < 0) {
-            index = static_cast<int>(size) + index;
+            index = static_cast<int>(size) + index + 1;
         }
 
         if (index < 0) {
