@@ -283,9 +283,10 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 std::vector<ValuePtr> arguments;
                 arguments.reserve(arglist->get_children().size());
                 for (const auto& child : arglist->get_children()) {
-                    if (evaluate_expression(child)->is_undefined())
+                    auto arg = evaluate_expression(child);
+                    if (arg->is_undefined())
                         return std::make_shared<UndefinedValue>();
-                    arguments.emplace_back(evaluate_expression(child));
+                    arguments.emplace_back(arg);
                 }
 
                 return function_it->second(arguments);

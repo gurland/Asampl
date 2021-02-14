@@ -1,0 +1,25 @@
+PROGRAM PlayAndSaveVideo {
+    Elements {
+	    arr1 = 0;
+        arr2 = 0;
+    }
+    Actions {
+        arr1 = array();
+        arr2 = array();
+        array_push(arr1, 1);
+        array_push(arr1, 2);
+        array_push(arr1, 3);
+        dbg(arr1);
+        dbg(array_pop(arr1));
+        dbg(arr1);
+
+        array_push(arr2, 9);
+        array_push(arr2, 8);
+        array_push(arr2, 7);
+
+        array_set(arr2, 1, 999);
+
+        dbg(array_concat(arr1, arr2));
+        dbg(array_slice(arr2, 1, 3));
+    }
+}

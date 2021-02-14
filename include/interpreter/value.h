@@ -8,6 +8,21 @@
 #include "tree.h"
 #include "interpreter/image.h"
 
+namespace _asa_value_private {
+
+template< typename T >
+struct IsVector {
+    constexpr static bool value = false;
+};
+
+template< typename T >
+struct IsVector<std::vector<T>> {
+    using VectorType = T;
+    constexpr static bool value = true;
+};
+
+}
+
 enum class ValueType {
 	NUMBER,
 	BOOL,
@@ -63,8 +78,23 @@ public:
         } else if constexpr (std::is_same_v<std::decay_t<T>, AsaImage>) {
             const cv::Mat& data = data_.data;
             std::stringstream ss;
-            ss << "[IMAGE " << data.size().width << ":" << data.size().height << "]";
+            ss << "{IMAGE " << data.size().width << ":" << data.size().height << "}";
             return ss.str();
+        } else if constexpr (_asa_value_private::IsVector<std::decay_t<T>>::value) {
+            if (data_.empty()) {
+                return "[]";
+            } else {
+                std::stringstream ss;
+                ss << "[";
+                for (auto it = data_.begin(); it != data_.end(); ++it) {
+                    ss << (*it)->to_string();
+                    if (it != std::prev(data_.end())) {
+                        ss << ", ";
+                    }
+                }
+                ss << "]";
+                return ss.str();
+            }
         } else {
             return std::to_string(data_);
         }
