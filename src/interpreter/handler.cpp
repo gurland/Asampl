@@ -1,6 +1,8 @@
 #include "interpreter/handler.h"
+#include "interpreter/ffi_conversion.h"
 
 #include <filesystem>
+#include <vector>
 
 namespace {
 
@@ -21,14 +23,43 @@ void load_function(dynalo::library& lib, std::function<T>& func, const char* nam
 Handler::Handler(const std::string& path)
     : library_(to_native_name(path))
 {
-    load_function(library_, open_download, "asa_handler_open_download");
-    load_function(library_, open_upload, "asa_handler_open_upload");
-    load_function(library_, close, "asa_handler_close");
-    load_function(library_, push, "asa_handler_push");
-    load_function(library_, get_type, "asa_handler_get_type");
-    load_function(library_, download, "asa_handler_download");
-    load_function(library_, upload, "asa_handler_upload");
-    load_function(library_, free, "asa_handler_free");
+    load_function(library_, open_download_, "asa_handler_open_download");
+    load_function(library_, open_upload_, "asa_handler_open_upload");
+    load_function(library_, close_, "asa_handler_close");
+    load_function(library_, push_, "asa_handler_push");
+    load_function(library_, download_, "asa_handler_download");
+    load_function(library_, upload_, "asa_handler_upload");
+}
+
+std::unique_ptr<HandlerContextDownload> Handler::open_download()
+{
+    return std::unique_ptr<HandlerContextDownload>(new HandlerContextDownload(this));
+}
+
+
+HandlerContextDownload::HandlerContextDownload(Handler* handler)
+    : handler_(handler)
+    , context_(handler->open_download_())
+{
+    if (context_ == nullptr) {
+        throw InterpreterException("Could not open handler for download");
+    }
+}
+
+void HandlerContextDownload::push(const std::vector<uint8_t>& data) {
+    AsaBytes bytes;
+    bytes.size = data.size();
+    bytes.data = const_cast<uint8_t*>(data.data());
+
+    handler_->push_(context_, &bytes);
+}
+
+AsaHandlerResponse HandlerContextDownload::download() {
+    return handler_->download_(context_);
+}
+
+HandlerContextDownload::~HandlerContextDownload() {
+    handler_->close_(context_);
 }
 
 
@@ -39,29 +70,7 @@ ActiveDownload::ActiveDownload(const std::string& filename, Handler* handler)
         throw InterpreterException("Could not open '" + filename + "'");
     }
 
-    this->handler = handler;
-
     handler_ctx = handler->open_download();
-    if (handler_ctx == nullptr) {
-        throw InterpreterException("Could not open download");
-    }
-}
-
-ActiveDownload::~ActiveDownload() {
-    if (handler != nullptr && handler_ctx != nullptr) {
-        handler->close(handler_ctx);
-        handler = nullptr;
-        handler_ctx = nullptr;
-    }
-}
-
-ActiveDownload::ActiveDownload(ActiveDownload&& other) {
-    stream_in = std::move(other.stream_in);
-    handler = other.handler;
-    handler_ctx = other.handler_ctx;
-
-    other.handler = nullptr;
-    other.handler_ctx = nullptr;
 }
 
 bool ActiveDownload::fill_data() {
@@ -70,72 +79,47 @@ bool ActiveDownload::fill_data() {
     }
 
     std::vector<uint8_t> data{std::istreambuf_iterator<char>{stream_in}, {}};
-    AsaData packet;
-    packet.size = data.size();
-    packet.data = data.data();
-    handler->push(handler_ctx, &packet);
+    handler_ctx->push(data);
     return true;
 }
 
 ValuePtr ActiveDownload::download_frame_val() {
-    const AsaData *frame = download_frame();
-    if (frame) {
-        auto ret = frame_to_value(frame);
-        handler->free(handler_ctx, frame);
-        return ret;
-    } else {
+    auto frame = download_frame();
+    if (frame)
+    {
+        auto value = convert_from_ffi(*frame);
+        asa_deinit_container(frame);
+        asa_free(frame);
+        return value;
+    }
+    else
+    {
         return std::make_shared<UndefinedValue>();
     }
 }
 
-const AsaData *ActiveDownload::download_frame() {
+AsaValueContainer* ActiveDownload::download_frame() {
     fill_data();
 
     while (true) {
-        auto frame = handler->download(handler_ctx);
-        switch (frame->status) {
+        auto response = handler_ctx->download();
+        switch (response.status) {
             case ASA_STATUS_FATAL: {
-                std::string msg = frame->error;
-                handler->free(handler_ctx, frame);
+                std::string msg = response.error;
+                asa_deinit_response(&response);
                 throw InterpreterException(msg);
             }
-            case ASA_STATUS_AGAIN:
+            case ASA_STATUS_NOT_READY:
             case ASA_STATUS_EOI:
-                handler->free(handler_ctx, frame);
+                asa_deinit_response(&response);
                 if (fill_data()) {
                     continue;
                 } else {
                     return nullptr;
                 }
             default: {
-                return frame;
+                return response.value;
             }
         }
-    }
-}
-
-ValuePtr ActiveDownload::frame_to_value(const AsaData* frame) {
-    switch (handler->get_type(handler_ctx)) {
-        case ASA_VIDEO: {
-            auto video_frame = reinterpret_cast<AsaVideoData*>(frame->data);
-            cv::Mat image(video_frame->height, video_frame->width, CV_8UC3, video_frame->frame);
-            AsaImage ret { image.clone() };
-            return std::make_shared<Value<AsaImage>>(std::move(ret));
-        }
-
-        case ASA_NUMBER: {
-            const double value = *reinterpret_cast<double*>(frame->data);
-            return std::make_shared<Value<double>>(value);
-        }
-
-        case ASA_STRING: {
-            auto string_frame = reinterpret_cast<AsaStringData*>(frame->data);
-            std::string value{string_frame->data, string_frame->data + string_frame->length};
-            return std::make_shared<Value<std::string>>(std::move(value));
-        }
-
-        default:
-            return std::make_shared<UndefinedValue>();
-            // throw InterpreterException("Handler type not supported");
     }
 }

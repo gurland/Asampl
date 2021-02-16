@@ -1,10 +1,10 @@
 
 #include "interpreter/timeline.h"
-#include "handler_interface.h"
 #include "interpreter.h"
 #include "interpreter/exception.h"
 #include "interpreter/image.h"
 #include "interpreter/value.h"
+#include "interpreter/ffi_conversion.h"
 
 #include <limits>
 #include <cstdlib>
@@ -15,8 +15,8 @@
 #define DOWNLOAD_FIRST_FRAME(dwnld, start_time)     \
     ({                                              \
         auto *__frame = dwnld->download_frame();    \
-        while(true) {                               \
-            if (__frame->time >= start_time)        \
+        while(__frame) {                            \
+            if (__frame->timestamp >= start_time)   \
                 break;                              \
             __frame = dwnld->download_frame();      \
         }                                           \
@@ -44,8 +44,8 @@ bool Timeline::prepare_iteration() {
     cur_time = std::numeric_limits<float>::max();
     for (auto &dwnld_data : downloads_data_) {
         auto &cur_frame = dwnld_data.second.cur_frame;
-        if (cur_frame && cur_frame->time < cur_time) {
-            cur_time = cur_frame->time;
+        if (cur_frame && cur_frame->timestamp < cur_time) {
+            cur_time = cur_frame->timestamp;
         }
     }
 
@@ -61,17 +61,18 @@ bool Timeline::prepare_iteration() {
             throw InterpreterException("Variable with id '" + var_id + "' does not exist");
         }
         if (cur_frame) {
-            if (cur_frame->time <= cur_time) {
-                auto ret = dwnld->frame_to_value(cur_frame);
-                dwnld->handler->free(dwnld->handler_ctx, cur_frame);
+            if (cur_frame->timestamp <= cur_time) {
+                auto ret = convert_from_ffi(*cur_frame);
+                asa_deinit_container(cur_frame);
+                asa_free(cur_frame);
                 cur_frame = nullptr;
                 variable_it->second = ret;
             }
         }
-        if (next_frame && (!cur_frame || next_frame->time <= cur_time)) {
+        if (next_frame && (!cur_frame || next_frame->timestamp <= cur_time)) {
             cur_frame = dwnld_data.second.next_frame;
             auto *tmp = dwnld->download_frame();
-            if (tmp && (!end || tmp->time <= end))
+            if (tmp && (!end || tmp->timestamp <= end))
                 dwnld_data.second.next_frame = tmp;
             else
                 dwnld_data.second.next_frame = nullptr;

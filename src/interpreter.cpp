@@ -98,7 +98,7 @@ void Program::execute_handler_import(const Tree *ast_tree) {
         const auto id_node = children[0]->get_node();
         const auto data_node = children[1]->get_node();
 
-        handlers_[id_node->value_] = std::make_unique<Handler>(data_node->value_);
+        handlers_[id_node->value_] = std::make_unique<Handler>(handlers_directory_ / data_node->value_);
     }
 }
 
@@ -340,6 +340,7 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             }
 
             auto *adwnld = add_download(children[1]->get_node()->value_, children[2]->get_node()->value_);
+            // TODO refactor maybe? not sure how it works
             variable_it->second = adwnld->download_frame_val();
             return std::make_shared<UndefinedValue>();
         }
