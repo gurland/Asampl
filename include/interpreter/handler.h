@@ -1,84 +1,57 @@
 #pragma once
 
-#include <functional>
-#include <string>
-#include <fstream>
+#include <filesystem>
 #include <memory>
-#include <optional>
+#include <vector>
+#include <fstream>
 
-#include <dynalo/dynalo.hpp>
-
-extern "C" {
-#include <asampl-ffi/ffi.h>
-}
-
-#include "interpreter/exception.h"
-#include "interpreter/image.h"
 #include "interpreter/value.h"
 
-class TimeLine;
+struct HandlerResponse {
+    bool enough_data;
+    double timestamp;
+    ValuePtr value;
 
-class Handler;
+    bool is_valid() const {
+        return enough_data && value != nullptr;
+    }
 
-class HandlerContextDownload {
-public:
-    void push(const std::vector<uint8_t>& data);
-    AsaHandlerResponse download();
+    static HandlerResponse new_out_of_data() {
+        return HandlerResponse { false, 0.0, nullptr };
+    }
 
-    ~HandlerContextDownload();
+    static HandlerResponse new_not_ready() {
+        return HandlerResponse { true, 0.0, nullptr };
+    }
 
-    HandlerContextDownload(const HandlerContextDownload& other) = delete;
-    HandlerContextDownload(HandlerContextDownload&& other) = delete;
-
-protected:
-    HandlerContextDownload(Handler* handler);
-
-    Handler* handler_;
-    AsaHandler* context_;
-
-private:
-    friend class Handler;
+    static HandlerResponse new_ready(ValuePtr value, double timestamp) {
+        return HandlerResponse { true, timestamp, std::move(value) };
+    }
 };
 
-class Handler {
+class IHandlerContextDownload {
 public:
-    Handler(const std::string& path);
+    virtual ~IHandlerContextDownload() = default;
 
-    std::unique_ptr<HandlerContextDownload> open_download();
-    //std::unique_ptr<HandlerContext> open_upload();
-
-protected:
-    dynalo::library library_;
-
-    std::function<AsaHandler*()> open_download_;
-    std::function<AsaHandler*()> open_upload_;
-    std::function<void(AsaHandler*)> close_;
-
-    std::function<int(AsaHandler*, const AsaBytes*)> push_;
-
-    std::function<AsaHandlerResponse(AsaHandler*)> download_;
-    std::function<AsaHandlerResponse(AsaHandler*)> upload_;
-
-private:
-    friend class HandlerContextDownload;
+    virtual void push(const std::vector<uint8_t>& data) = 0;
+    virtual HandlerResponse download() = 0;
 };
+
+class IHandler {
+public:
+    virtual ~IHandler() = default;
+
+    virtual std::unique_ptr<IHandlerContextDownload> open_download() = 0;
+};
+
+std::unique_ptr<IHandler> open_handler(std::filesystem::path path);
 
 struct ActiveDownload {
     std::ifstream stream_in;
-    std::unique_ptr<HandlerContextDownload> handler_ctx;
+    std::unique_ptr<IHandlerContextDownload> context;
 
-    ActiveDownload() {};
-    ActiveDownload(const std::string& filename, Handler* handler);
-
-    ActiveDownload(const ActiveDownload&) = delete;
-    ActiveDownload(ActiveDownload&&) = default;
+    ActiveDownload(const std::filesystem::path& filename, IHandler& handler);
 
     bool fill_data();
-    ValuePtr download_frame_val();
-
-private:
-    AsaValueContainer* download_frame();
-    ValuePtr frame_to_value(AsaValueContainer* data);
-private:
-    friend class Timeline;
+    HandlerResponse download();
 };

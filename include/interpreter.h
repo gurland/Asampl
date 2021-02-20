@@ -60,7 +60,7 @@ private:
     std::vector<std::filesystem::path> libraries_directories_;
 
 	std::unordered_map<std::string, ValuePtr> variables_;
-    std::unordered_map<std::string, std::unique_ptr<Handler>> handlers_;
+    std::unordered_map<std::string, std::unique_ptr<IHandler>> handlers_;
     std::unordered_map<std::string, Function> functions_;
     std::vector<std::unique_ptr<ILibrary>> libraries_;
     std::map<std::pair<std::string, std::string>, ActiveDownload> active_downloads_;
