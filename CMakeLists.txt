@@ -5,14 +5,6 @@ project(asampl)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -Wno-sign-compare -g")
 
-if(UNIX)
-    find_package(OpenCV REQUIRED)
-    include_directories(${OpenCV_INCLUDE_DIRS})
-else()
-    set(OPENCV_DIR ${PROJECT_SOURCE_DIR}/opencv)
-    find_package(OPENCV REQUIRED NAMES OpenCV)
-endif()
-
 add_subdirectory(deps/dynalo EXCLUDE_FROM_ALL)
 add_subdirectory(deps/asampl-ffi)
 
