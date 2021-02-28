@@ -21,6 +21,11 @@ int main(int argc, char *argv[])
 	}
 	const char *file_name = argv[1];
 
+    std::filesystem::path handlers_directory;
+    if (argc >= 3) {
+        handlers_directory = argv[2];
+    }
+
 	std::fstream file_stream(file_name);
 
 	if (!file_stream) {
@@ -48,6 +53,7 @@ int main(int argc, char *argv[])
 	tree->print(std::cout);
 
 	Program program;
+    program.set_handlers_directory(handlers_directory);
     program.load_stdlib();
     program.execute(tree);
 

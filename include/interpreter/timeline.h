@@ -5,12 +5,16 @@
 #include <stdbool.h>
 #include <optional>
 
+extern "C" {
+#include <asampl-ffi/types.h>
+}
+
 #include "interpreter/handler.h"
 
 struct DwnldData {
     std::string var_id;
-    const AsaData *cur_frame;
-    const AsaData *next_frame;
+    AsaValueContainer* cur_frame;
+    AsaValueContainer* next_frame;
 };
 
 class Program;

@@ -12,10 +12,10 @@ PROGRAM PlayAndSaveVideo {
         num = 0;
     }
     Actions {
-        Timeline (
+        Timeline [ 
             Download str from strings with strings;
             Download num from numbers with numbers;
-        ) {
+        ] {
             dbg(str);
             dbg(num);
             if (string_contains(str, 'yo')) {

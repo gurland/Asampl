@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <type_traits>
 #include <unordered_map>
 #include <string>
@@ -36,6 +37,8 @@ public:
 
     void load_stdlib();
 
+    void set_handlers_directory(std::filesystem::path path);
+
 	int execute(const Tree *ast_tree);
 private:
 	void execute_library_import(const Tree *ast_tree);
@@ -51,6 +54,8 @@ private:
     ValuePtr evaluate_expression(const Tree* ast_tree);
 
 private:
+    std::filesystem::path handlers_directory_;
+
 	std::unordered_map<std::string, ValuePtr> variables_;
     std::unordered_map<std::string, std::unique_ptr<Handler>> handlers_;
     std::unordered_map<std::string, Function> functions_;
@@ -74,4 +79,8 @@ inline void Program::add_variable(const std::string& id, const AstNode *data_nod
 
 inline void Program::add_function(const std::string& id, Function func) {
     functions_.emplace(id, func);
+}
+
+inline void Program::set_handlers_directory(std::filesystem::path path) {
+    handlers_directory_ = path;
 }

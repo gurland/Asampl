@@ -6,6 +6,7 @@ add_library(asampl-lib STATIC
 target_link_libraries(
     asampl-lib
 
+    asampl-ffi
     asampl-interface
     dynalo
     ${OpenCV_LIBRARIES})

@@ -15,8 +15,21 @@ using Function = std::function<ValuePtr(const std::vector<ValuePtr>&)>;
 
 template< typename T >
 auto convert_argument(ValuePtr& t) {
+    using ArgIsVector = _asa_value_private::IsVector<T>;
+
     if constexpr (std::is_same_v<std::decay_t<T>, ValuePtr>) {
         return std::tie(t);
+    } else if constexpr (ArgIsVector::value) {
+        auto& values = t->template try_get<std::vector<ValuePtr>>();
+        if constexpr (std::is_same_v<typename ArgIsVector::VectorType, ValuePtr>) {
+            return std::tie(values);
+        } else {
+            std::vector<typename ArgIsVector::VectorType> converted_values;
+            for (auto& value : values) {
+                converted_values.push_back(value->template try_get<std::decay_t<T>>());
+            }
+            return std::make_tuple(converted_values);
+        }
     } else {
         return std::tie(t->template try_get<std::decay_t<T>>());
     }
@@ -32,6 +45,11 @@ std::tuple<T&, Ts&...> convert_arguments(ArgsArray& args) {
             convert_arguments<first_arg + 1, ArgsArray, Ts...>(args)
         );
     }
+}
+
+template<std::size_t first_arg, typename ArgsArray>
+std::tuple<> convert_arguments(ArgsArray& args) {
+    return std::make_tuple();
 }
 
 template<typename R, typename... Args>

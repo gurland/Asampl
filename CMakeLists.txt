@@ -14,6 +14,7 @@ else()
 endif()
 
 add_subdirectory(deps/dynalo EXCLUDE_FROM_ALL)
+add_subdirectory(deps/asampl-ffi)
 
 add_library(asampl-interface INTERFACE)
 target_include_directories(asampl-interface INTERFACE include)
@@ -23,7 +24,7 @@ add_subdirectory(src)
 # executable
 add_executable(asampl Asampl.cpp)
 
-target_link_libraries(asampl asampl-lib)
+target_link_libraries(asampl asampl-lib asampl-ffi)
 
 #handlers
 file(GLOB HANDLERS handlers/*)
