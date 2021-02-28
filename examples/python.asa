@@ -1,0 +1,18 @@
+PROGRAM PythonHandler {
+    Handlers {
+        python from 'python-handler';
+    }
+    Sources {
+        null from '/dev/null';
+    }
+    Elements {
+        value = 0;
+    }
+    Actions {
+        Timeline [
+            Download value from null with python;
+        ] {
+            dbg(value);
+        }
+    }
+}

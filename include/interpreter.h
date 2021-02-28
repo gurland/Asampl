@@ -17,6 +17,12 @@
 
 class Program {
 public:
+    Program();
+    ~Program();
+
+    Program(const Program&) = delete;
+    Program(Program&&) = delete;
+
     ValuePtr get_abstract_variable_value_by_id(const std::string& id) {
 		if (variables_.find(id) == variables_.end()) {
             throw InterpreterException("Variable with id '" + id + "' does not exist");

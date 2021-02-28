@@ -34,12 +34,26 @@ ValuePtr AbstractValue::from_literal(const AstNode* data_node) {
     }
 }
 
-int Program::execute(const Tree *ast_tree) {
+Program::Program() {
 #ifdef ASAMPL_ENABLE_PYTHON
     Py_Initialize();
     boost::python::numpy::initialize();
 #endif
+}
 
+Program::~Program() {
+    active_downloads_.clear();
+    variables_.clear();
+    functions_.clear();
+    handlers_.clear();
+    libraries_.clear();
+
+#ifdef ASAMPL_ENABLE_PYTHON
+    Py_Finalize();
+#endif
+}
+
+int Program::execute(const Tree *ast_tree) {
 	auto ast_node = ast_tree->get_node();
 	assert(ast_node->type_ == AstNodeType::PROGRAM);
 
@@ -96,10 +110,6 @@ int Program::execute(const Tree *ast_tree) {
 		}
 		}
 	}
-
-#ifdef ASAMPL_ENABLE_PYTHON
-    Py_Finalize();
-#endif
 
 	return EXIT_SUCCESS;
 }
