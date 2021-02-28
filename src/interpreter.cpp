@@ -14,6 +14,11 @@
 
 #include "interpreter/test_stdlib.h"
 
+#ifdef ASAMPL_ENABLE_PYTHON
+#include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
+#endif
+
 static bool is_value(AstNodeType t);
 
 ValuePtr AbstractValue::from_literal(const AstNode* data_node) {
@@ -27,6 +32,25 @@ ValuePtr AbstractValue::from_literal(const AstNode* data_node) {
     default:
         return nullptr;
     }
+}
+
+Program::Program() {
+#ifdef ASAMPL_ENABLE_PYTHON
+    Py_Initialize();
+    boost::python::numpy::initialize();
+#endif
+}
+
+Program::~Program() {
+    active_downloads_.clear();
+    variables_.clear();
+    functions_.clear();
+    handlers_.clear();
+    libraries_.clear();
+
+#ifdef ASAMPL_ENABLE_PYTHON
+    Py_Finalize();
+#endif
 }
 
 int Program::execute(const Tree *ast_tree) {
@@ -69,7 +93,16 @@ int Program::execute(const Tree *ast_tree) {
 			break;
 		}
 		case AstNodeType::ACTIONS: {
-			execute_actions(child);
+#ifdef ASAMPL_ENABLE_PYTHON
+           try {
+               execute_actions(child);
+           } catch (const boost::python::error_already_set&) {
+               PyErr_Print();
+               throw InterpreterException("Python error");
+           }
+#else
+           execute_actions(child);
+#endif
 			break;
 		}
 		default: {
@@ -82,7 +115,37 @@ int Program::execute(const Tree *ast_tree) {
 }
 
 void Program::execute_library_import(const Tree *ast_tree) {
+	auto ast_node = ast_tree->get_node();
+	assert(ast_node->type_ == AstNodeType::LIBRARIES);
 
+	for (const auto& child : ast_tree->get_children()) {
+		const bool matches = child->match(
+            AstNodeType::LIB_IMPORT,
+            AstNodeType::ID
+		);
+        assert(matches);
+
+        const auto& lib_name = child->get_children()[0]->get_node()->value_;
+
+        bool opened_library = false;
+        for (const auto& dir : libraries_directories_) {
+            try {
+                auto library = open_library(dir / lib_name);
+
+                for (auto [ name, func ] : library->get_functions()) {
+                    add_function(lib_name + '_' + name, std::move(func));
+                }
+
+                libraries_.push_back(std::move(library));
+                opened_library = true;
+                break;
+            } catch (const InterpreterException& e) {}
+        }
+
+        if (!opened_library) {
+            throw InterpreterException("Library " + lib_name + " not found");
+        }
+    }
 }
 
 void Program::execute_handler_import(const Tree *ast_tree) {
@@ -98,7 +161,7 @@ void Program::execute_handler_import(const Tree *ast_tree) {
         const auto id_node = children[0]->get_node();
         const auto data_node = children[1]->get_node();
 
-        handlers_[id_node->value_] = std::make_unique<Handler>(handlers_directory_ / data_node->value_);
+        handlers_[id_node->value_] = open_handler(handlers_directory_ / data_node->value_);
     }
 }
 
@@ -341,7 +404,10 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
 
             auto *adwnld = add_download(children[1]->get_node()->value_, children[2]->get_node()->value_);
             // TODO refactor maybe? not sure how it works
-            variable_it->second = adwnld->download_frame_val();
+            auto response = adwnld->download();
+            if (response.is_valid()) {
+                variable_it->second = std::move(response.value);
+            }
             return std::make_shared<UndefinedValue>();
         }
         case AstNodeType::TIMELINE: {
@@ -411,10 +477,10 @@ ActiveDownload *Program::add_download(const std::string& _source_node, const std
 	const auto& source_file = sources_.at(source_node);
 	auto active_it = active_downloads_.find(std::make_pair(source_file, handler_node));
 	if (active_it == active_downloads_.end()) {
-		Handler* handler = handlers_.at(handler_node).get();
+		IHandler* handler = handlers_.at(handler_node).get();
 		active_it = active_downloads_.emplace(
 			std::pair(source_node, handler_node),
-			ActiveDownload{source_file, handler}).first;
+			ActiveDownload{source_file, *handler}).first;
 	}
 	return &active_it->second;
 }

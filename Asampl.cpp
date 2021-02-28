@@ -26,6 +26,11 @@ int main(int argc, char *argv[])
         handlers_directory = argv[2];
     }
 
+    std::filesystem::path libraries_directory;
+    if (argc >= 4) {
+        libraries_directory = argv[3];
+    }
+
 	std::fstream file_stream(file_name);
 
 	if (!file_stream) {
@@ -54,6 +59,9 @@ int main(int argc, char *argv[])
 
 	Program program;
     program.set_handlers_directory(handlers_directory);
+    if (!libraries_directory.empty()) {
+        program.add_libraries_directory(libraries_directory);
+    }
     program.load_stdlib();
     program.execute(tree);
 

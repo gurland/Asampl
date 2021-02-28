@@ -29,7 +29,10 @@ namespace {
     }
 
     void show_image(AsaImage image) {
-        cv::imshow("", image.data);
+        cv::Mat bgr;
+
+        cv::cvtColor(image.data, bgr, cv::COLOR_RGB2BGR);
+        cv::imshow("", bgr);
         cv::waitKey(43);
     }
 

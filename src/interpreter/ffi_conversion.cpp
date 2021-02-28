@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "interpreter/exception.h"
 #include <interpreter/ffi_conversion.h>
 
@@ -30,3 +32,67 @@ ValuePtr convert_from_ffi(const AsaValueContainer& value) {
             return std::make_shared<UndefinedValue>();
     }
 }
+
+#ifdef ASAMPL_ENABLE_PYTHON
+
+#include <boost/python/numpy.hpp>
+
+namespace py = boost::python;
+namespace np = py::numpy;
+
+np::ndarray mat_to_ndarray(const cv::Mat& mat) {
+    py::tuple shape = py::make_tuple(mat.rows, mat.cols, mat.channels());
+    py::tuple stride = py::make_tuple(mat.channels() * mat.cols * sizeof(uchar), mat.channels() * sizeof(uchar), sizeof(uchar));
+    np::dtype dt = np::dtype::get_builtin<uchar>();
+    np::ndarray array = np::from_data(mat.data, dt, shape, stride, py::object());
+
+    return array;
+}
+
+py::object convert_to_python(const ValuePtr& value) {
+    switch (value->get_type()) {
+        case ValueType::NUMBER: {
+            return py::object(value->try_get<double>());
+        }
+
+        case ValueType::STRING: {
+            return py::object(value->try_get<std::string>());
+        }
+
+        case ValueType::IMAGE: {
+            return mat_to_ndarray(value->try_get<AsaImage>().data);
+        }
+
+        default:
+            throw InterpreterException("Could not covert type to python");
+    }
+}
+
+ValuePtr convert_from_python(py::object value) {
+    if (auto extract = py::extract<double>(value); extract.check()) {
+        return std::make_shared<Value<double>>(extract());
+    }
+    if (auto extract = py::extract<std::string>(value); extract.check()) {
+        return std::make_shared<Value<std::string>>(extract());
+    }
+    if (auto extract = py::extract<np::ndarray>(value); extract.check()) {
+        auto array = extract().astype(np::dtype::get_builtin<uint8_t>());
+        if (array.get_nd() == 3) {
+            int sizes[2] = { static_cast<int>(array.shape(0)), static_cast<int>(array.shape(1)) };
+            size_t steps[2] = { static_cast<size_t>(array.strides(0)), static_cast<size_t>(array.strides(1)) };
+
+            cv::Mat image(2, sizes, CV_8UC3, array.get_data(), steps);
+
+            AsaImage ret { image.clone() };
+            return std::make_shared<Value<AsaImage>>(std::move(ret));
+        } else if (array.get_nd() == 1) {
+            throw InterpreterException("Audio is not supported yet");
+        } else {
+            throw InterpreterException("Invalid number of dimensions");
+        }
+    }
+
+    return std::make_shared<UndefinedValue>();
+}
+
+#endif
