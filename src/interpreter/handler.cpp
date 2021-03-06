@@ -26,7 +26,7 @@ bool ActiveDownload::fill_data() {
     return true;
 }
 
-HandlerResponse ActiveDownload::download() {
+HandlerDownloadResponse ActiveDownload::download() {
     fill_data();
 
     while (true) {
@@ -35,7 +35,7 @@ HandlerResponse ActiveDownload::download() {
             if (fill_data()) {
                 continue;
             } else {
-                return HandlerResponse::new_out_of_data();
+                return HandlerDownloadResponse::new_out_of_data();
             }
         } else {
             return response;

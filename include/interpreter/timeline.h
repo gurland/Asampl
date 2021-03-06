@@ -9,8 +9,8 @@
 
 struct DwnldData {
     std::string var_id;
-    HandlerResponse cur_frame;
-    HandlerResponse next_frame;
+    HandlerDownloadResponse cur_frame;
+    HandlerDownloadResponse next_frame;
 };
 
 class Program;

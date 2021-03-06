@@ -30,7 +30,7 @@ public:
     FFIContextDownload(FFIHandler& handler);
 
     void push(const std::vector<uint8_t>& data) override;
-    HandlerResponse download() override;
+    HandlerDownloadResponse download() override;
 
 private:
     FFIHandler& handler_;
@@ -52,6 +52,10 @@ public:
 
     std::unique_ptr<IHandlerContextDownload> open_download() override {
         return std::unique_ptr<FFIContextDownload>(new FFIContextDownload(*this));
+    }
+
+    std::unique_ptr<IHandlerContextUpload> open_upload() override {
+        throw InterpreterException("FFI upload is not supported yet");
     }
 
 private:
@@ -87,7 +91,7 @@ void FFIContextDownload::push(const std::vector<uint8_t>& data) {
     handler_.push_(context_, &bytes);
 }
 
-HandlerResponse FFIContextDownload::download() {
+HandlerDownloadResponse FFIContextDownload::download() {
     AsaHandlerResponse response = handler_.download_(context_);
     switch (response.status) {
         case ASA_STATUS_FATAL: {
@@ -97,16 +101,16 @@ HandlerResponse FFIContextDownload::download() {
         }
         case ASA_STATUS_NOT_READY:
             asa_deinit_response(&response);
-            return HandlerResponse::new_not_ready();
+            return HandlerDownloadResponse::new_not_ready();
         case ASA_STATUS_EOI:
             asa_deinit_response(&response);
-            return HandlerResponse::new_out_of_data();
+            return HandlerDownloadResponse::new_out_of_data();
         default: {
             const double timestamp = response.value->timestamp;
             auto value = convert_from_ffi(*response.value);
             asa_deinit_container(response.value);
             asa_free(response.value);
-            return HandlerResponse::new_ready(std::move(value), timestamp);
+            return HandlerDownloadResponse::new_valid(std::move(value), timestamp);
         }
     }
 }

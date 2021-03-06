@@ -62,7 +62,7 @@ bool Timeline::prepare_iteration() {
         if (cur_frame.is_valid()) {
             if (cur_frame.timestamp <= cur_time) {
                 variable_it->second = cur_frame.value;
-                cur_frame = HandlerResponse::new_not_ready();
+                cur_frame = HandlerDownloadResponse::new_not_ready();
             }
         }
         if (next_frame.is_valid() && (!cur_frame.is_valid() || next_frame.timestamp <= cur_time)) {
@@ -71,7 +71,7 @@ bool Timeline::prepare_iteration() {
             if (tmp.is_valid() && (!end || tmp.timestamp <= end))
                 dwnld_data.second.next_frame = tmp;
             else
-                dwnld_data.second.next_frame = HandlerResponse::new_not_ready();
+                dwnld_data.second.next_frame = HandlerDownloadResponse::new_not_ready();
         }
         if (cur_frame.is_valid() || next_frame.is_valid()) {
             result = true;
