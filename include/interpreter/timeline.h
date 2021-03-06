@@ -17,8 +17,8 @@ namespace Asampl::Interpreter::Timeline {
 
 struct DwnldData {
     std::string var_id;
-    Handler::HandlerResponse cur_frame;
-    Handler::HandlerResponse next_frame;
+    Handler::DownloadResponse cur_frame;
+    Handler::DownloadResponse next_frame;
 };
 
 class Timeline {
