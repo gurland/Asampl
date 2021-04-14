@@ -3,6 +3,10 @@
 #include <vector>
 #include <utility>
 
-#include "interpreter/function.h"
+#include "interpreter/value.h"
 
-std::vector<std::pair<std::string, Function>> get_stdlib_functions();
+namespace Asampl::Interpreter {
+
+std::vector<Function> get_stdlib_functions();
+
+}

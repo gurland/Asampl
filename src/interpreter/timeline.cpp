@@ -1,10 +1,10 @@
 #include "interpreter/timeline.h"
 #include "interpreter/exception.h"
-#include "interpreter/image.h"
 #include "interpreter/value.h"
 #include "interpreter/ffi_conversion.h"
 #include "interpreter.h"
 
+#include <string>
 #include <limits>
 #include <cstdlib>
 #include <memory>
@@ -21,6 +21,11 @@
         }                                          \
         std::move(__frame);                        \
     })
+
+namespace Asampl::Interpreter::Timeline {
+
+using namespace Handler;
+namespace std = ::std;
 
 Timeline::Timeline(Program *program) :
     program_(program)
@@ -78,4 +83,6 @@ bool Timeline::prepare_iteration() {
         }
     }
     return result;
+}
+
 }

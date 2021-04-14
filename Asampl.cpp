@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
 	tree->print(std::cout);
 
-	Program program;
+    Asampl::Interpreter::Program program;
     program.set_handlers_directory(handlers_directory);
     if (!libraries_directory.empty()) {
         program.add_libraries_directory(libraries_directory);

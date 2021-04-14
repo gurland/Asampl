@@ -23,6 +23,8 @@ void load_function(dynalo::library& lib, std::function<T>& func, const char* nam
 
 }
 
+namespace Asampl::Interpreter::Handler {
+
 class FFIHandler;
 
 class FFIContextDownload : public IHandlerContextDownload {
@@ -109,4 +111,6 @@ HandlerResponse FFIContextDownload::download() {
             return HandlerResponse::new_ready(std::move(value), timestamp);
         }
     }
+}
+
 }

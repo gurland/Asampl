@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "interpreter.h"
 #include "interpreter/timeline.h"
+#include "interpreter/ffi_conversion.h"
 #include "matcher.h"
 
 #include <iomanip>
@@ -19,16 +20,18 @@
 #include <boost/python/numpy.hpp>
 #endif
 
+namespace Asampl::Interpreter {
+
 static bool is_value(AstNodeType t);
 
-ValuePtr AbstractValue::from_literal(const AstNode* data_node) {
+ValuePtr value_from_literal(const AstNode* data_node) {
     switch (data_node->type_) {
     case AstNodeType::NUMBER:
-        return std::make_shared<Value<double>>(stod(data_node->value_));
+        return Number{stod(data_node->value_)};
     case AstNodeType::BOOL:
-        return std::make_shared<Value<bool>>(data_node->value_ == "true");
+        return Bool{data_node->value_ == "true"};
     case AstNodeType::STRING:
-        return std::make_shared<Value<std::string>>(data_node->value_);
+        return String{data_node->value_};
     default:
         return nullptr;
     }
@@ -38,6 +41,7 @@ Program::Program() {
 #ifdef ASAMPL_ENABLE_PYTHON
     Py_Initialize();
     boost::python::numpy::initialize();
+    init_conversions();
 #endif
 }
 
@@ -130,10 +134,11 @@ void Program::execute_library_import(const Tree *ast_tree) {
         bool opened_library = false;
         for (const auto& dir : libraries_directories_) {
             try {
-                auto library = open_library(dir / lib_name);
+                auto library = Library::open_library(dir / lib_name);
 
-                for (auto [ name, func ] : library->get_functions()) {
-                    add_function(lib_name + '_' + name, std::move(func));
+                for (auto&& func : library->get_functions()) {
+                    auto name = lib_name + '_' + func.name;
+                    add_function(std::move(name), std::move(func));
                 }
 
                 libraries_.push_back(std::move(library));
@@ -161,7 +166,7 @@ void Program::execute_handler_import(const Tree *ast_tree) {
         const auto id_node = children[0]->get_node();
         const auto data_node = children[1]->get_node();
 
-        handlers_[id_node->value_] = open_handler(handlers_directory_ / data_node->value_);
+        handlers_[id_node->value_] = Handler::open_handler(handlers_directory_ / data_node->value_);
     }
 }
 
@@ -235,107 +240,74 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             }
 
             variable->second = evaluate_expression(children.at(1));
-            return std::make_shared<UndefinedValue>();
+            return Undefined{};
         }
 
         case AstNodeType::ADD: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() + right->try_get<double>());
+            return Number{left->get<Number>().value + right->get<Number>().value};
         }
         case AstNodeType::SUB: {
             if (children.size() == 1) {
                 UNARY_EXPR;
-                return std::make_shared<Value<double>>(-operand->try_get<double>());
+                return Number{-operand->get<Number>().value};
             } else {
                 BINARY_EXPR;
-                return std::make_shared<Value<double>>(
-                    left->try_get<double>() - right->try_get<double>());
+                return Number{left->get<Number>().value - right->get<Number>().value};
             }
         }
         case AstNodeType::MUL: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() * right->try_get<double>());
+            return Number{left->get<Number>().value * right->get<Number>().value};
         }
         case AstNodeType::DIV: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() / right->try_get<double>());
+            return Number{left->get<Number>().value / right->get<Number>().value};
         }
         case AstNodeType::MOD: {
             assert(false && "unimplemented");
         }
+
         case AstNodeType::EQUAL: {
             BINARY_EXPR;
-            switch (left->get_type()) {
-            case ValueType::NUMBER:
-                return std::make_shared<Value<bool>>(
-                    left->try_get<double>() == right->try_get<double>());
-            case ValueType::BOOL:
-                return std::make_shared<Value<bool>>(
-                    left->try_get<bool>() == right->try_get<bool>());
-            case ValueType::STRING:
-                return std::make_shared<Value<bool>>(
-                    left->try_get<std::string>() == right->try_get<std::string>());
-            default:
-                assert(false && "unimplemented");
-            }
+            return Bool{*left == *right};
         }
         case AstNodeType::NOTEQUAL: {
             BINARY_EXPR;
-            switch (left->get_type()) {
-            case ValueType::NUMBER:
-                return std::make_shared<Value<bool>>(
-                    left->try_get<double>() != right->try_get<double>());
-            case ValueType::BOOL:
-                return std::make_shared<Value<bool>>(
-                    left->try_get<bool>() != right->try_get<bool>());
-            case ValueType::STRING:
-                return std::make_shared<Value<bool>>(
-                    left->try_get<std::string>() != right->try_get<std::string>());
-            default:
-                assert(false && "unimplemented");
-            }
+            return Bool{*left != *right};
         }
         case AstNodeType::NOT: {
             UNARY_EXPR;
-            return std::make_shared<Value<bool>>(!operand->try_get<bool>());
+            return Bool{!operand->get<Bool>().value};
         }
         case AstNodeType::MORE: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() > right->try_get<double>());
+            return Bool{left->get<Number>().value > right->get<Number>().value};
         }
         case AstNodeType::LESS: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() < right->try_get<double>());
+            return Bool{left->get<Number>().value < right->get<Number>().value};
         }
         case AstNodeType::MORE_OR_EQUAL: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() >= right->try_get<double>());
+            return Bool{left->get<Number>().value >= right->get<Number>().value};
         }
         case AstNodeType::LESS_OR_EQUAL: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<double>() <= right->try_get<double>());
+            return Bool{left->get<Number>().value <= right->get<Number>().value};
         }
         case AstNodeType::AND: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<bool>() && right->try_get<bool>());
+            return Bool{left->get<Bool>().value && right->get<Bool>().value};
         }
         case AstNodeType::OR: {
             BINARY_EXPR;
-            return std::make_shared<Value<double>>(
-                left->try_get<bool>() || right->try_get<bool>());
+            return Bool{left->get<Bool>().value || right->get<Bool>().value};
         }
         case AstNodeType::NUMBER:
         case AstNodeType::STRING:
         case AstNodeType::BOOL:
-        return AbstractValue::from_literal(ast_tree->get_node());
+            return value_from_literal(ast_tree->get_node());
 
         case AstNodeType::ID: {
             auto arglist = ast_tree->find_child(AstNodeType::ARGLIST);
@@ -352,12 +324,14 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 arguments.reserve(arglist->get_children().size());
                 for (const auto& child : arglist->get_children()) {
                     auto arg = evaluate_expression(child);
-                    if (arg->is_undefined())
-                        return std::make_shared<UndefinedValue>();
+                    // TODO probably remove
+                    if (arg->is<Undefined>()) {
+                        return Undefined{};
+                    }
                     arguments.emplace_back(arg);
                 }
 
-                return function_it->second(arguments);
+                return function_it->second.func(arguments);
             }
         }
 
@@ -367,13 +341,13 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             const auto& condition = children[0];
             const auto& block = children[1];
 
-            if (evaluate_expression(condition)->try_get<bool>()) {
+            if (evaluate_expression(condition)->get<Bool>().value) {
                 evaluate_expression(block);
             } else if (children.size() >= 3) {
                 const auto& else_block = children[2];
                 evaluate_expression(else_block);
             }
-            return std::make_shared<UndefinedValue>();
+            return Undefined{};
         }
 
         case AstNodeType::WHILE: {
@@ -382,17 +356,17 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             const auto& condition = children[0];
             const auto& block = children[1];
 
-            while (evaluate_expression(condition)->try_get<bool>()) {
+            while (evaluate_expression(condition)->get<Bool>().value) {
                 evaluate_expression(block);
             }
-            return std::make_shared<UndefinedValue>();
+            return Undefined{};
         }
 
         case AstNodeType::BLOCK: {
              for (const auto& child : children) {
                  evaluate_expression(child);
              }
-             return std::make_shared<UndefinedValue>();
+             return Undefined{};
         }
 
         case AstNodeType::DOWNLOAD: {
@@ -408,7 +382,7 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             if (response.is_valid()) {
                 variable_it->second = std::move(response.value);
             }
-            return std::make_shared<UndefinedValue>();
+            return Undefined{};
         }
         case AstNodeType::TIMELINE: {
             auto matches = ast_tree->match(
@@ -422,7 +396,7 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
             );
             assert(matches);
 
-            active_timeline_ = std::make_shared<Timeline>(this);
+            active_timeline_ = std::make_shared<Timeline::Timeline>(this);
             evaluate_expression(children[0]);
 
             auto res = false;
@@ -430,13 +404,13 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 res = active_timeline_->prepare_iteration();
                 evaluate_expression(children[1]);
             } while(res);
-            return std::make_shared<UndefinedValue>();
+            return Undefined{};
         }
         case AstNodeType::TIMELINE_EXPR: {
             int offset = 0;
             if (children[0]->get_node()->type_ != AstNodeType::DOWNLOAD) {
-                active_timeline_->start = evaluate_expression(children[0])->try_get<double>();
-                active_timeline_->end = evaluate_expression(children[1])->try_get<double>();
+                active_timeline_->start = evaluate_expression(children[0])->get<Number>();
+                active_timeline_->end = evaluate_expression(children[1])->get<Number>();
                 offset = 2;
             }
             for (auto it = children.begin() + offset; it != children.end(); ++it) {
@@ -447,12 +421,12 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
                 if (variable_it == variables_.end()) {
                     throw InterpreterException("Variable with id '" + target + "' does not exist");
                 }
-                variable_it->second = std::make_shared<UndefinedValue>();
+                variable_it->second = Undefined{};
 
                 auto *adwnld = add_download(gchildren[1]->get_node()->value_, gchildren[2]->get_node()->value_);
                 active_timeline_->add_download(adwnld, target);
             }
-            return std::make_shared<UndefinedValue>();
+            return Undefined{};
         }
 
         default:
@@ -464,23 +438,33 @@ ValuePtr Program::evaluate_expression(const Tree* ast_tree) {
 #undef BINARY_EXPR
 #undef UNARY_EXPR
 
-void Program::load_stdlib() {
-    for (const auto& [ name, func ] : get_stdlib_functions()) {
-        add_function(name, func);
+void Program::add_variable(const std::string& id, const AstNode *data_node) {
+    auto value = value_from_literal(data_node);
+    if (value != nullptr) {
+        variables_.emplace(id, std::move(value));
+    } else {
+        throw InterpreterException("Invalid type of data node");
     }
 }
 
-ActiveDownload *Program::add_download(const std::string& _source_node, const std::string& _handler_node) {
+void Program::load_stdlib() {
+    for (auto&& func : get_stdlib_functions()) {
+        auto name = func.name;
+        add_function(std::move(name), std::move(func));
+    }
+}
+
+Handler::ActiveDownload *Program::add_download(const std::string& _source_node, const std::string& _handler_node) {
 	const auto& source_node = _source_node;
 	const auto& handler_node = _handler_node;
 
 	const auto& source_file = sources_.at(source_node);
 	auto active_it = active_downloads_.find(std::make_pair(source_file, handler_node));
 	if (active_it == active_downloads_.end()) {
-		IHandler* handler = handlers_.at(handler_node).get();
+        Handler::IHandler* handler = handlers_.at(handler_node).get();
 		active_it = active_downloads_.emplace(
 			std::pair(source_node, handler_node),
-			ActiveDownload{source_file, *handler}).first;
+			Handler::ActiveDownload{source_file, *handler}).first;
 	}
 	return &active_it->second;
 }
@@ -490,4 +474,6 @@ static bool is_value(AstNodeType t) {
 		t == AstNodeType::NUMBER ||
 		t == AstNodeType::STRING ||
 		t == AstNodeType::BOOL;
+}
+
 }

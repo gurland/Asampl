@@ -6,9 +6,11 @@
 #include "interpreter/function.h"
 #include "interpreter/ffi_conversion.h"
 
+namespace Asampl::Interpreter::Library {
+
 namespace py = boost::python;
 
-ValuePtr python_function_call(py::object func, const std::vector<ValuePtr>& args) {
+ValuePtr python_function_call(py::object func, Utils::Slice<ValuePtr> args) {
     py::list py_args;
     for (const auto& arg : args) {
         py_args.append(convert_to_python(arg));
@@ -24,8 +26,8 @@ public:
         py::exec_file(path.c_str(), ns);
     }
 
-    virtual std::vector<std::pair<std::string, Function>> get_functions() override {
-        std::vector<std::pair<std::string, Function>> functions;
+    virtual std::vector<Function> get_functions() override {
+        std::vector<Function> functions;
 
         auto keys = ns.keys();
         const auto len = py::len(keys);
@@ -35,7 +37,7 @@ public:
             auto key = py::extract<std::string>(keys[i])();
             if (key.find("asampl_") == 0) {
                 const std::string function_name = key.substr(strlen("asampl_"));
-                functions.emplace_back(function_name, std::bind(python_function_call, ns[key], std::placeholders::_1));
+                functions.emplace_back(Function{ function_name, std::bind(python_function_call, ns[key], std::placeholders::_1) });
             }
         }
 
@@ -45,3 +47,5 @@ public:
 private:
     py::dict ns;
 };
+
+}

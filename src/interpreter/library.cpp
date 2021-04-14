@@ -7,9 +7,13 @@
 
 #endif
 
+namespace Asampl::Interpreter::Library {
+
 std::unique_ptr<ILibrary> open_library(const std::filesystem::path& path) {
 #ifdef ASAMPL_ENABLE_PYTHON
         return std::make_unique<PythonLibrary>(path);
 #endif
         throw InterpreterException("Could not open library");
+}
+
 }

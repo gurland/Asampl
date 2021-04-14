@@ -5,6 +5,8 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 
+namespace Asampl::Interpreter::Handler {
+
 namespace py = boost::python;
 namespace np = py::numpy;
 
@@ -78,4 +80,6 @@ HandlerResponse PythonHandlerDownload::download() {
     const double timestamp = py::extract<double>(response["timestamp"]);
     auto value = convert_from_python(response["value"]);
     return HandlerResponse::new_ready(std::move(value), timestamp);
+}
+
 }

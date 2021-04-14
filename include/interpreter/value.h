@@ -1,141 +1,356 @@
 #pragma once
 
+#include <string>
+#include <unordered_map>
 #include <memory>
+#include <optional>
+#include <variant>
+#include <vector>
 #include <functional>
 
-#include <opencv2/opencv.hpp>
+#include "utils.h"
 
-#include "tree.h"
-#include "interpreter/image.h"
+namespace Asampl::Interpreter {
 
-namespace _asa_value_private {
+struct Value;
+struct ValuePtr {
+    std::shared_ptr<Value> ptr;
 
-template< typename T >
-struct IsVector {
-    constexpr static bool value = false;
-};
+    //ValuePtr(ValuePtr&&) = default;
+    ValuePtr(const ValuePtr&) = default;
+    ValuePtr(std::nullptr_t) : ptr{nullptr} {}
+    ValuePtr(Value&& value)
+        : ptr{std::make_shared<Value>(std::move(value))}
+    {
+    }
 
-template< typename T >
-struct IsVector<std::vector<T>> {
-    using VectorType = T;
-    constexpr static bool value = true;
+    template< typename T >
+    ValuePtr(T&& value)
+    {
+        if constexpr (std::is_same_v<std::decay_t<T>, ValuePtr>) {
+            ptr = value.ptr;
+        } else {
+            ptr = std::make_shared<Value>(std::forward<T>(value));
+        }
+    }
+
+    ValuePtr& operator=(const ValuePtr&) = default;
+    ValuePtr& operator=(ValuePtr&&) = default;
+
+    Value& operator*() {
+        return *ptr;
+    }
+
+    Value& operator*() const {
+        return *ptr;
+    }
+
+    Value* operator->() {
+        return ptr.get();
+    }
+
+    Value* operator->() const {
+        return ptr.get();
+    }
+
+    bool operator==(std::nullptr_t) const {
+        return ptr == nullptr;
+    }
+
+    bool operator!=(std::nullptr_t) const {
+        return ptr != nullptr;
+    }
 };
 
 }
 
-enum class ValueType {
-	NUMBER,
-	BOOL,
-	STRING,
-	UNDEFINED,
-	AUDIO,
-    IMAGE
+
+namespace std {
+
+template<> struct hash<Asampl::Interpreter::ValuePtr> {
+    std::size_t operator()(const Asampl::Interpreter::ValuePtr& ptr) const noexcept {
+        hash<std::shared_ptr<Asampl::Interpreter::Value>> hasher;
+        return hasher(ptr.ptr);
+    }
 };
 
-class AbstractValue;
-using ValuePtr = std::shared_ptr<AbstractValue>;
+}
 
-class AbstractValue {
-public:
-	ValueType get_type() { return type_; }
-	virtual ~AbstractValue() = default;
+namespace Asampl::Interpreter {
 
-    virtual std::string to_string() const = 0;
-    virtual ValuePtr clone() const = 0;
+using Byte = uint8_t;
 
-    static ValuePtr from_literal(const AstNode* data_node);
-
-    virtual bool is_undefined() {
-        return false;
+struct Undefined {
+    std::string to_string() const {
+        return "UNDEFINED";
     }
 
-    template<typename T>
-    T& try_get();
-protected:
-	ValueType type_;
-};
-
-template<typename T>
-class Value : public AbstractValue {
-public:
-	Value(const T &data) :
-		data_(data)
-	{
-		if constexpr (std::is_arithmetic_v<T>) {
-			type_ = ValueType::NUMBER;
-		} else if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
-			type_ = ValueType::STRING;
-		} else if constexpr (std::is_same_v<std::decay_t<T>, bool>) {
-			type_ = ValueType::BOOL;
-		} else if constexpr (std::is_same_v<std::decay_t<T>, AsaImage>) {
-			type_ = ValueType::IMAGE;
-		}
-	}
-
-    std::string to_string() const override {
-        if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
-            return data_;
-        } else if constexpr (std::is_same_v<std::decay_t<T>, AsaImage>) {
-            const cv::Mat& data = data_.data;
-            std::stringstream ss;
-            ss << "{IMAGE " << data.size().width << ":" << data.size().height << "}";
-            return ss.str();
-        } else if constexpr (_asa_value_private::IsVector<std::decay_t<T>>::value) {
-            if (data_.empty()) {
-                return "[]";
-            } else {
-                std::stringstream ss;
-                ss << "[";
-                for (auto it = data_.begin(); it != data_.end(); ++it) {
-                    ss << (*it)->to_string();
-                    if (it != std::prev(data_.end())) {
-                        ss << ", ";
-                    }
-                }
-                ss << "]";
-                return ss.str();
-            }
-        } else {
-            return std::to_string(data_);
-        }
+    Undefined clone() const {
+        return Undefined{};
     }
 
-    ValuePtr clone() const override {
-        return std::make_shared<Value<T>>(*this);
-    }
-
-	T& get_data() {
-		return data_;
-	}
-
-	void set_data(const T &data) {
-		data_ = data;
-	}
-
-private:
-	T data_;
-};
-
-class UndefinedValue : public AbstractValue {
-public:
-    UndefinedValue() {
-        type_ = ValueType::UNDEFINED;
-    }
-
-    std::string to_string() const override {
-        return "undefined";
-    }
-
-    ValuePtr clone() const override {
-        return std::make_shared<UndefinedValue>();
-    }
-
-    virtual bool is_undefined() override {
+    bool operator==(const Undefined&) const {
         return true;
     }
 };
 
-template<typename T>
-T& AbstractValue::try_get() {
-    return dynamic_cast<Value<T>&>(*this).get_data();
+struct Number {
+    double value;
+
+    std::string to_string() const {
+        return std::to_string(value);
+    }
+
+    Number clone() const {
+        return *this;
+    }
+
+    bool operator==(const Number& other) const {
+        return value == other.value;
+    }
+
+    operator double() const {
+        return value;
+    }
+
+    int32_t as_int() const {
+        return value;
+    }
+
+    size_t as_size() const {
+        return value;
+    }
+};
+
+struct Bool {
+    bool value;
+
+    std::string to_string() const {
+        return value ? "TRUE" : "FALSE";
+    }
+
+    Bool clone() const {
+        return *this;
+    }
+
+    bool operator==(const Bool& other) const {
+        return value == other.value;
+    }
+};
+
+struct String {
+    std::string value;
+
+    String(std::string value)
+        : value{std::move(value)}
+    {
+    }
+
+    std::string to_string() const {
+        return value;
+    }
+
+    String clone() const {
+        return *this;
+    }
+
+    bool operator==(const String& other) const {
+        return value == other.value;
+    }
+};
+
+struct Image {
+    size_t width;
+    size_t height;
+    std::vector<Byte> data;
+
+    constexpr static size_t channels = 3;
+
+    std::string to_string() const {
+        return "<Image " + std::to_string(width) + " " + std::to_string(height) + ">";
+    }
+
+    Image clone() const {
+        return *this;
+    }
+
+    bool operator==(const Image& other) const {
+        return width == other.width && height == other.height && data == other.data;
+    }
+};
+
+struct Tuple {
+    std::vector<ValuePtr> values;
+
+    std::string to_string() const;
+
+    Tuple clone() const {
+        return *this;
+    }
+
+    bool operator==(const Tuple& other) const;
+};
+
+struct Map {
+    std::unordered_map<ValuePtr, ValuePtr> map;
+
+    std::string to_string() const;
+
+    Map clone() const {
+        return *this;
+    }
+
+    bool operator==(const Map& other) const {
+        return false; // TODO
+    }
+};
+
+struct ByteArray {
+    std::vector<Byte> data;
+
+    std::string to_string() const;
+
+    ByteArray clone() const {
+        return *this;
+    }
+
+    bool operator==(const ByteArray& other) const {
+        return data == other.data;
+    }
+};
+
+struct Function {
+    std::string name;
+    std::function<ValuePtr(Utils::Slice<ValuePtr>)> func;
+
+    std::string to_string() const {
+        return "<Function " + name + ">";
+    }
+
+    Function clone() const {
+        return *this;
+    }
+
+    bool operator==(const Function& other) const {
+        assert(false && "function comparison not implemented");
+    }
+};
+
+template< typename T >
+struct ValueVisitor {
+public:
+    using Result = T;
+    
+    virtual Result operator()(Undefined&) = 0;
+    virtual Result operator()(Number&) = 0;
+    virtual Result operator()(Bool&) = 0;
+    virtual Result operator()(String&) = 0;
+    virtual Result operator()(Image&) = 0;
+    virtual Result operator()(Tuple&) = 0;
+    virtual Result operator()(ByteArray&) = 0;
+    virtual Result operator()(Map&) = 0;
+    virtual Result operator()(Function&) = 0;
+};
+
+struct Value {
+    using VariantType = std::variant<
+        Undefined,
+        Number,
+        Bool,
+        String,
+        Image,
+        Tuple,
+        ByteArray,
+        Map,
+        Function
+        >;
+
+    VariantType variant;
+
+    Value(const Value&) = default;
+    Value(Value&&) = default;
+
+    template< typename T >
+    Value(T&& t)
+        : variant(t)
+    {
+    }
+
+    Value& operator=(const Value&) = default;
+    Value& operator=(Value&&) = default;
+
+    template< typename T >
+    static ValuePtr make_ptr(T&& t) {
+        return ValuePtr{Value{std::forward<T>(t)}};
+    }
+
+    template< typename T >
+    constexpr bool is() const {
+        return std::holds_alternative<std::decay_t<T>>(variant);
+    }
+
+    template< typename T >
+    constexpr T& get() {
+        return std::get<std::decay_t<T>>(variant);
+    }
+
+    template< typename T >
+    constexpr const T& get() const {
+        return std::get<std::decay_t<T>>(variant);
+    }
+
+    template< typename T >
+    constexpr std::optional<std::reference_wrapper<T>> try_get() {
+        if (is<T>()) {
+            return get<T>();
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    template< typename T >
+    constexpr std::optional<std::reference_wrapper<const T>> try_get() const {
+        if (is<T>()) {
+            return get<T>();
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    Value clone() const {
+        return std::visit([](const auto& value) {
+            return Value{value.clone()};
+        }, variant);
+    }
+
+    ValuePtr clone_ptr() const {
+        return ValuePtr(clone());
+    }
+
+    std::string to_string() const {
+        return std::visit([](const auto& value) {
+                return value.to_string();
+        }, variant);
+    }
+
+    template< typename V >
+    typename V::Result apply(V& visitor) {
+        return std::visit(visitor, variant);
+    }
+
+    bool operator==(const Value& other) const {
+        if (variant.index() != other.variant.index()) {
+            return false;
+        }
+
+        return std::visit([&](const auto& value) -> bool {
+            return value == other.get<decltype(value)>();
+        }, variant);
+    }
+
+    bool operator!=(const Value& other) const {
+        return !(*this == other);
+    }
+};
+
 }

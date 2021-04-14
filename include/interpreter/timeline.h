@@ -7,13 +7,19 @@
 
 #include "interpreter/handler.h"
 
-struct DwnldData {
-    std::string var_id;
-    HandlerResponse cur_frame;
-    HandlerResponse next_frame;
-};
+namespace Asampl::Interpreter {
 
 class Program;
+
+}
+
+namespace Asampl::Interpreter::Timeline {
+
+struct DwnldData {
+    std::string var_id;
+    Handler::HandlerResponse cur_frame;
+    Handler::HandlerResponse next_frame;
+};
 
 class Timeline {
 public:
@@ -21,7 +27,7 @@ public:
     Timeline(const Timeline&) = delete;
     Timeline(Timeline&&) = delete;
 
-    void add_download(ActiveDownload *dwnld, const std::string &var_id);
+    void add_download(Handler::ActiveDownload *dwnld, const std::string &var_id);
 
     bool prepare_iteration();
 
@@ -30,7 +36,10 @@ public:
 private:
     Program *program_;
 private:
-    std::unordered_map<ActiveDownload *, DwnldData> downloads_data_;
+    std::unordered_map<Handler::ActiveDownload*, DwnldData> downloads_data_;
 
     double cur_time = 0;
 };
+
+}
+

@@ -7,6 +7,8 @@
 
 #include "interpreter/value.h"
 
+namespace Asampl::Interpreter::Handler {
+
 struct HandlerResponse {
     bool enough_data;
     double timestamp;
@@ -55,3 +57,6 @@ struct ActiveDownload {
     bool fill_data();
     HandlerResponse download();
 };
+
+}
+
