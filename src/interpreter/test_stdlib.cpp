@@ -5,7 +5,10 @@
 
 #include <opencv2/opencv.hpp>
 
-//namespace {
+namespace {
+
+using namespace Asampl::Interpreter;
+
     //int convert_index(int index, size_t size) {
         //if (size == 0) {
             //throw InterpreterException("Cannot index empty array");
@@ -21,32 +24,53 @@
 
         //return index;
     //}
-//}
+    
+cv::Mat as_mat(Image& image) {
+    return cv::Mat (static_cast<int>(image.height), static_cast<int>(image.width), CV_8UC3, image.data.data());
+}
+
+}
 
 namespace {
 
-using namespace Asampl::Interpreter;
-    Image random_image(Number width, Number height) {
-        const auto w = width.as_size();
-        const auto h = width.as_size();
+Image random_image(Number width, Number height) {
+    const auto w = width.as_size();
+    const auto h = width.as_size();
 
-        cv::Mat img(width.as_int(), height.as_int(), CV_8UC3);
-        cv::randu(img, cv::Scalar(0, 0, 0), cv::Scalar(255, 255, 255));
+    cv::Mat img(width.as_int(), height.as_int(), CV_8UC3);
+    cv::randu(img, cv::Scalar(0, 0, 0), cv::Scalar(255, 255, 255));
 
-        std::vector<Byte> data;
-        data.resize(w * h * img.channels());
-        std::copy(const_cast<const uchar*>(img.data), img.dataend, data.data());
+    std::vector<Byte> data;
+    data.resize(w * h * img.channels());
+    std::copy(const_cast<const uchar*>(img.data), img.dataend, data.data());
 
-        return Image { w, h, data };
-    }
+    return Image { w, h, data };
+}
 
-    //void show_image(AsaImage image) {
-        //cv::Mat bgr;
+void show_image(Image& image) {
+    cv::Mat bgr;
+    cv::cvtColor(as_mat(image), bgr, cv::COLOR_RGB2BGR);
+    cv::imshow("", bgr);
+    cv::waitKey(43);
+}
 
-        //cv::cvtColor(image.data, bgr, cv::COLOR_RGB2BGR);
-        //cv::imshow("", bgr);
-        //cv::waitKey(43);
-    //}
+void overlay_image(Image& background, Image& image, Number x, Number y) {
+    auto img = as_mat(image);
+    img.copyTo(as_mat(background)(cv::Rect(x.as_size(), y.as_size(), img.cols, img.rows)));
+}
+
+Tuple tuple(ArgsRest rest) {
+    return rest.tuple;
+}
+
+Image load_image(const String& path)
+{
+    auto bgr = cv::imread(path.value);
+    cv::Mat rgb;
+    cv::cvtColor(bgr, rgb, cv::COLOR_BGR2RGB);
+    std::vector<Byte> data(rgb.datastart, rgb.dataend);
+    return Image{ static_cast<size_t>(rgb.cols), static_cast<size_t>(rgb.rows), std::move(data) };
+}
 
 void dbg(const Value& value) {
     std::cout << "DEBUG: " << value.to_string() << std::endl;
@@ -84,23 +108,13 @@ String string_concat(const String& a, const String& b) {
     return String{a.value + b.value};
 }
 
-//double width(const AsaImage& img) {
-    //return img.data.cols;
-//}
+Number width(const Image& img) {
+    return Number{img.width};
+}
 
-//double height(const AsaImage& img) {
-    //return img.data.rows;
-//}
-
-//AsaImage overlay_image(AsaImage& background, const AsaImage& img, double x, double y) {
-    //img.data.copyTo(background.data(cv::Rect(x, y, img.data.cols, img.data.rows)));
-    //return background;
-//}
-
-//AsaImage load_image(const std::string& path)
-//{
-    //return { cv::imread(path) };
-//}
+Number height(const Image& img) {
+    return Number{img.height};
+}
 
 //std::vector<ValuePtr> array() {
     //return {};
@@ -176,6 +190,12 @@ std::vector<Function> get_stdlib_functions() {
         MAKE_ASAMPL_FUNCTION(string_contains),
         MAKE_ASAMPL_FUNCTION(string_concat),
         MAKE_ASAMPL_FUNCTION(random_image),
+        MAKE_ASAMPL_FUNCTION(load_image),
+        MAKE_ASAMPL_FUNCTION(show_image),
+        MAKE_ASAMPL_FUNCTION(overlay_image),
+        MAKE_ASAMPL_FUNCTION(width),
+        MAKE_ASAMPL_FUNCTION(height),
+        MAKE_ASAMPL_FUNCTION(tuple),
         //std::make_pair("change_color_channel", make_asampl_function(change_color_channel)),
         //std::make_pair("change_color", make_asampl_function(change_color)),
         //std::make_pair("string_contains", make_asampl_function(string_contains)),

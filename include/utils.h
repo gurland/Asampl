@@ -74,6 +74,15 @@ public:
         return ptr + _size;
     }
 
+    void copy_to_vector(std::vector<T>& vec)
+    {
+        vec.clear();
+        for (auto& elem : *this)
+        {
+            vec.push_back(elem);
+        }
+    }
+
 private:
     T* ptr;
     size_t _size;

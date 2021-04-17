@@ -13,6 +13,8 @@
 
 namespace Asampl::Interpreter {
 
+struct ArgsRest { Tuple tuple; };
+
 template< typename T >
 T& convert_argument(ValuePtr& x) {
     if constexpr (std::is_same_v<std::decay_t<T>, ValuePtr>) {
@@ -25,23 +27,28 @@ T& convert_argument(ValuePtr& x) {
 }
 
 template<typename T, typename... Ts>
-std::tuple<T&, Ts&...> convert_arguments_impl(Utils::Slice<ValuePtr> args) {
+std::tuple<T&, Ts&...> convert_arguments_impl(Utils::Slice<ValuePtr> args, ArgsRest& rest) {
     if constexpr (sizeof...(Ts) == 0) {
-        return std::tie(convert_argument<T>(args.head()));
+        if constexpr (std::is_same_v<std::decay_t<T>, ArgsRest>) {
+            args.copy_to_vector(rest.tuple.values);
+            return std::tie(rest);
+        } else {
+            return std::tie(convert_argument<T>(args.head()));
+        }
     } else {
         return std::tuple_cat(
             std::tie(convert_argument<T>(args.head())),
-            convert_arguments_impl<Ts...>(args.tail())
+            convert_arguments_impl<Ts...>(args.tail(), rest)
         );
     }
 }
 
 template<typename... Ts>
-std::tuple<Ts&...> convert_arguments(Utils::Slice<ValuePtr> args) {
+std::tuple<Ts&...> convert_arguments(Utils::Slice<ValuePtr> args, ArgsRest& rest) {
     if constexpr (sizeof...(Ts) == 0) {
         return std::make_tuple();
     } else {
-        return convert_arguments_impl<Ts...>(args);
+        return convert_arguments_impl<Ts...>(args, rest);
     }
 }
 
@@ -50,7 +57,8 @@ Function make_asampl_function(const char* name, std::function<R(Args...)> func) 
     auto asampl_func = [name, func](Utils::Slice<ValuePtr> args) -> ValuePtr {
         assert(args.size() >= sizeof...(Args));
 
-        auto args_tuple = convert_arguments<Args...>(args);
+        ArgsRest rest;
+        auto args_tuple = convert_arguments<Args...>(args, rest);
         if constexpr (std::is_same_v<R, void>) {
             std::apply(func, std::move(args_tuple));
             return Value::make_ptr(Undefined{});

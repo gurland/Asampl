@@ -10,29 +10,29 @@ AsaValueContainer convert_to_ffi(const ValuePtr& value) {
 }
 
 ValuePtr convert_from_ffi(const AsaValueContainer& value) {
-    //switch (value.type) {
-        //case ASA_DOUBLE: {
-            //const double val = reinterpret_cast<const AsaDouble*>(value.data)->value;
-            //return std::make_shared<Value<double>>(val);
-        //}
+    switch (value.type) {
+        case ASA_DOUBLE: {
+            const double val = reinterpret_cast<const AsaDouble*>(value.data)->value;
+            return Number{val};
+        }
 
-        //case ASA_STRING: {
-            //const auto* string = reinterpret_cast<const AsaString*>(value.data);
-            //std::string string_value{string->data, string->size};
-            //return std::make_shared<Value<std::string>>(string_value);
-        //}
+        case ASA_STRING: {
+            const auto* string = reinterpret_cast<const AsaString*>(value.data);
+            std::string string_value{string->data, string->size};
+            return String{string_value};
+        }
 
-        //case ASA_VIDEO_FRAME: {
-            //auto video_frame = reinterpret_cast<AsaVideoFrame*>(value.data);
-            //cv::Mat image(video_frame->height, video_frame->width, CV_8UC3, video_frame->data);
-            //AsaImage ret { image.clone() };
-            //return std::make_shared<Value<AsaImage>>(std::move(ret));
-        //}
+        case ASA_VIDEO_FRAME: {
+            auto video_frame = reinterpret_cast<AsaVideoFrame*>(value.data);
+            std::vector<Byte> data;
+            data.resize(video_frame->width * video_frame->height * 3u);
+            std::copy(video_frame->data, video_frame->data + data.size(), data.data());
+            return Image { video_frame->width, video_frame->height, std::move(data) };
+        }
 
-        //default:
-            //return std::make_shared<UndefinedValue>();
-    //}
-    throw InterpreterException("convert from ffi not implemented");
+        default:
+            return Undefined{};
+    }
 }
 
 }

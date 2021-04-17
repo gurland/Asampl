@@ -7,6 +7,7 @@ PROGRAM Test1 {
         s2 = 0;
     }
     Actions {
+        dbg(tuple(1, 2, 3));
         s1 = 'Hello';
         s2 = 'World';
         dbg(s1);

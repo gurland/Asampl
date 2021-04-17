@@ -97,6 +97,16 @@ struct Undefined {
 struct Number {
     double value;
 
+    Number(double value)
+        : value{value}
+    {
+    }
+
+    Number(size_t value)
+        : value{static_cast<double>(value)}
+    {
+    }
+
     std::string to_string() const {
         return std::to_string(value);
     }

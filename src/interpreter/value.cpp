@@ -9,7 +9,7 @@ std::string Tuple::to_string() const {
     ss << "[";
     for (size_t i = 0; i < values.size(); i++) {
         ss << values[i]->to_string();
-        if (i == values.size() - 1) {
+        if (i != values.size() - 1) {
             ss << ", ";
         }
     }
@@ -40,7 +40,7 @@ std::string ByteArray::to_string() const {
     ss << "[";
     for (size_t i = 0; i < data.size(); i++) {
         ss << data[i];
-        if (i == data.size() - 1) {
+        if (i != data.size() - 1) {
             ss << ", ";
         }
     }
