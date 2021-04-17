@@ -1,150 +1,109 @@
-Asampl 
+prog = {handler_decl}, {library_decl}, {var_or_func_decl};
 
-program = 'Program', ID, '{',
-    [ libraries_section ],
-    [ handlers_section ],
-    [ renderers_section ],
-    [ sources_section ],
-    [ sets_section ],
-    [ elements_section ],
-    [ tuples_section ],
-    [ aggregates_section ],
-    actions_section,
-'}';
+handler_decl = "handler", id, "from", file_name;
 
-//Libraries
+library_decl = "library", id, "from", file_name;
 
-libraries_section = 'Libraries', '{', {library_import}, '}';
+var_or_func_decl = var_decl | func_decl;
 
-library_import = ID, ";";
+var_decl = var_dev_without_init | var_dev_with_init;
+var_decl_without_init = "let", id, ";";
+var_decl_with_init = "let", id, "=", data, ";";
+data = expr
+   | arr_init;
+arr_init = "{", [arg_list], "}";
+arg_list = expr, [",", arg_list];
 
-handlers_section = 'Handlers', '{', {item_import}, '}';
+func_decl = "fn", id, "(", [param_list], ")", block_st;
+param_list = id, [",", param_list];
 
-renderers_section = 'Renderers', '{', {item_import}, '}';
+block_st = "{", {st}, "}";
 
-sources_section = 'Sources', '{', {item_import}, '}';
+st = expr_st
+   | block_st
+   | select_st
+   | iter_st
+   | match_st
+   | timeline_st
+   | download_st
+   | updload_st
+   | jump_st;
 
-sets_section ='Sets', '{', {item_import}, '}';
-
-item_import = ID, "from", expr, ";";
-
-
-//Elements
-elements_section = 'Elements', '{', {element_declaration}, '}';
-
-element_declaration = ID, assign, data, ";";
-
-//Tuples
-tuples_section = 'Tuples', '{',
-    {tuples_section_declaration},
-'}';
-
-tuples_section_declaration =
-    ID, assign , data,';';
-
-//Aggregates
-aggregates_section =  'Aggregates', '{', {aggr_decl}, '}';
-
-aggr_decl = ID, assign , data ;
-
-//Actions
-actions_section = 'Actions',"{", {action}, "}";
-
-action = block_actions
-	| expr_st
-	| sequence_action
-	| download_action
-	| upload_action
-	| render_action
-	| if_action
-	| cases_action
-	| timeline_action
-	| substitution_action;
-
-block_actions = "{", {action}, "}";
-
-
-sequence_action = 'Sequence','{', {action},'}';
-
-download_action = 'Download', stream_names,
-    'From', source_name,
-    'With', handler_name,
-';';
-
-upload_action = 'Upload', stream_names,
-    'To', source_name,
-    'With', handler_name,
-';';
-
-
-
-render_action = 'Render', stream_names, 'With', expr, ';';
-
-
-
-timeline_action = 'Timeline', timeline_overload, block_actions
-
-
-timeline_overload = timeline_expr
-    | timeline_as
-    | timeline_until
-    | timeline_while
-
-timeline_expr = '(',expr, ':', expr, ':', expr,')';
-timeline_as = 'As', ID ;
-timeline_until = 'UNTIL', expr ;
-timeline_while =  'WHILE', expr ;
-
-ifAction = 'If', condition,
-    'Then', actions_block,
-    [else_action] ;
-else_action = 'Else', actions_block;
-
-cases_action = 'Case', expression, 'Of',a
-    cases_branch, {cases_branch},
-    [else_action] ;
-
-cases_branch = scalar_value, ':', actions_block;
-
-
-substitution_action = ' ', substitution with, 'For', substitution what,'When', condition,';';
-
-expr_st = [expr], ";";  
-block_st = "{", {st}, "}"; 
+expr_st = [expr], ";";
+block_st = "{", {var_decl}, {st}, "}";
 select_st = "if", "(", expr, ")", st, ["else", st];
 iter_st = "while", "(", expr, ")", st;
 
+match_st = "match", expr, "{", [case_list], [def_case], "}";
+case_list = match_list, "->", st, [case_list];
+match_list = expr, ["|", match_list];
+def_case = "def", "->", st;
+
+timeline_st = "timeline", obj, func;
+
+obj = expr | obj_decl;
+obj_decl = "{", [fld_list], "}";
+fld_list = expr, ":", expr, [',', fld_list];
+
+func = expr | lambda;
+lambda = "|", [param_list], "|", block_st;
+
+download_st = "download", expr, "from", expr, "with", expr;
+updload_st = "upload", expr, "to", expr, "with", expr;
+
+jump_st = ("continue" | "break" | "return", [expr]), ";";
+
 expr = assign;
-assign = log_or, assign_ap;
-assign_ap = "=", log_or, assign_ap | EPS;
+
+assign = ternary, assign_ap;
+assign_ap = assign_op, ternary, assign_ap | none;
+assign_op = "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "|=" | "^=";
+
+ternary = log_or "|" log_or "?" expr ":" expr;
+
 log_or = log_and, log_or_ap;
-log_or_ap = "||", log_and, log_or_ap | EPS;
-log_and = eq, log_and_ap;
-log_and_ap = "&&", eq, log_and_ap | EPS;
+log_or_ap = "||", log_and, log_or_ap | none;
+
+log_and = incl_or, log_and_ap;
+log_and_ap = "&&", incl_or, log_and_ap | none;
+
+incl_or = excl_or, incl_or_ap;
+incl_or_ap = "|", excl_or, incl_or_ap | none;
+
+excl_or = and, excl_or_ap;
+excl_or_ap = "^", and, excl_or_ap | none;
+
+and = eq, and_ap;
+and_ap = "&", eq, and_ap | none;
+
 eq = rel, eq_ap;
+eq_ap = ("==" | "!="), rel, eq_ap | none;
 
-eq_ap = ("==" | "!="), rel, eq_ap | EPS;
-rel = add, rel_ap;
-rel_ap = ("<" | "<=" | ">" | ">="), add, rel_ap | EPS;
+rel = shift, rel_ap;
+rel_ap = ("<" | "<=" | ">" | ">="), shift, rel_ap | none;
+
+shift = add, shift_ap;
+shift_ap = ("<<" | ">>"), add, shift_ap | none;
+
 add = mult, add_ap;
-add_ap = ("+" | "-"), mult, add_ap | EPS;
+add_ap = ("+" | "-"), mult, add_ap | none;
+
 mult = unary, mult_ap;
-mult_ap = ("*" | "/" | "%"), unary, mult_ap | EPS;
+mult_ap = ("*" | "/" | "%"), unary, mult_ap | none;
 
-unary = primary
-  | ("+" | "-" | "!"), primary;
+unary = postfix | ("+" | "-" | "!" | "~" | "++" | "--"), unary;
 
-primary = NUMBER
-  | STRING
-  | BOOL
-  | var_or_call
-  | parentheses;
-var_or_call = ID, [fn_call];
+postfix = primary | postfix, ("--" | "++");
+
+postfix = primary, postfix_ap;
+postfix_ap = ("--" | "++"), postfix_ap | none;
+
+primary = number
+   | string
+   | bool
+   | var_or_call
+   | parentheses;
+
+var_or_call = id, [fn_call];
 parentheses = "(", expr, ")";
 fn_call = "(", [arg_list], ")";
-
-data = expr 
-   | arr_init;
-
-arr_init = "{", [arg_list], "}";
-arg_list = expr, [",", arg_list];
