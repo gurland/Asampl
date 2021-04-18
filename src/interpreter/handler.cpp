@@ -56,7 +56,7 @@ std::unique_ptr<IHandler> open_handler(std::filesystem::path path) {
         return std::make_unique<FFIHandler>(path);
     }  catch (...) {}
 
-    throw InterpreterException("Coult not open handler");
+    throw InterpreterException("Coult not open handler " + path.string());
 }
 
 }

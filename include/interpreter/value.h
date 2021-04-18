@@ -8,6 +8,7 @@
 #include <vector>
 #include <functional>
 
+#include "interpreter/exception.h"
 #include "utils.h"
 
 namespace Asampl::Interpreter {
@@ -199,6 +200,32 @@ struct Tuple {
     }
 
     bool operator==(const Tuple& other) const;
+
+    size_t convert_index(int32_t i) const {
+        if (i >= 0) {
+            return i;
+        } else {
+            return values.size() + i;
+        }
+    }
+
+    ValuePtr& operator[](int32_t i) {
+        const auto idx = convert_index(i);
+        if (idx < values.size()) {
+            return values[idx];
+        } else {
+            throw InterpreterException("Tuple index out of range");
+        }
+    }
+
+    const ValuePtr& operator[](int32_t i) const {
+        const auto idx = convert_index(i);
+        if (idx < values.size()) {
+            return values[idx];
+        } else {
+            throw InterpreterException("Tuple index out of range");
+        }
+    }
 };
 
 struct Map {
