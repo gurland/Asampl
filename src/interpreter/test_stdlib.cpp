@@ -3,6 +3,7 @@
 #include "interpreter.h"
 #include "interpreter/test_stdlib.h"
 
+#include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
 namespace {
@@ -27,6 +28,23 @@ using namespace Asampl::Interpreter;
     
 cv::Mat as_mat(Image& image) {
     return cv::Mat (static_cast<int>(image.height), static_cast<int>(image.width), CV_8UC3, image.data.data());
+}
+
+Image from_mat(const cv::Mat& mat) {
+    std::vector<Byte> data(mat.datastart, mat.dataend);
+    return Image{ static_cast<size_t>(mat.cols), static_cast<size_t>(mat.rows), std::move(data) };
+}
+
+cv::Size to_size(const Tuple& tuple) {
+    return {tuple[0]->get<Number>().as_int(), tuple[1]->get<Number>().as_int()};
+}
+
+cv::Point_<int> to_pos(const Tuple& tuple) {
+    return {tuple[0]->get<Number>().as_int(), tuple[1]->get<Number>().as_int()};
+}
+
+cv::Scalar to_color(const Tuple& tuple) {
+    return cv::Scalar(tuple[0]->get<Number>().value, tuple[1]->get<Number>().value, tuple[2]->get<Number>().value, CV_8UC3);
 }
 
 }
@@ -54,9 +72,37 @@ void show_image(Image& image) {
     cv::waitKey(43);
 }
 
-void overlay_image(Image& background, Image& image, Number x, Number y) {
+void overlay_image(Image& background, Image& image, const Tuple& pos_) {
+    auto pos = to_pos(pos_);
+    cv::Rect target_rect{pos.x, pos.y, static_cast<int>(image.width), static_cast<int>(image.height)};
+
+    auto bg = as_mat(background);
+    cv::Rect bg_rect{0, 0, bg.cols, bg.rows};
     auto img = as_mat(image);
-    img.copyTo(as_mat(background)(cv::Rect(x.as_size(), y.as_size(), img.cols, img.rows)));
+    cv::Rect source_rect{0, 0, img.cols, img.rows};
+
+    if (bg.empty() || img.empty()) {
+        return;
+    }
+
+    if (target_rect.tl().x < 0) {
+        target_rect.x = 0;
+    }
+    if (target_rect.tl().y < 0) {
+        target_rect.y = 0;
+    }
+    if (target_rect.br().x > bg_rect.br().x) {
+        const auto diff_x = target_rect.br().x - bg_rect.br().x;
+        target_rect.width -= diff_x;
+        source_rect.width = target_rect.width;
+    }
+    if (target_rect.br().y > bg_rect.br().y) {
+        const auto diff_y = target_rect.br().y - bg_rect.br().y;
+        target_rect.height -= diff_y;
+        source_rect.height = target_rect.height;
+    }
+
+    img(source_rect).copyTo(bg(target_rect));
 }
 
 Tuple tuple(ArgsRest rest) {
@@ -68,12 +114,37 @@ Image load_image(const String& path)
     auto bgr = cv::imread(path.value);
     cv::Mat rgb;
     cv::cvtColor(bgr, rgb, cv::COLOR_BGR2RGB);
-    std::vector<Byte> data(rgb.datastart, rgb.dataend);
-    return Image{ static_cast<size_t>(rgb.cols), static_cast<size_t>(rgb.rows), std::move(data) };
+    return from_mat(rgb);
 }
 
-void dbg(const Value& value) {
-    std::cout << "DEBUG: " << value.to_string() << std::endl;
+Image scale_image(Image& image, const Tuple& size, ArgsRest rest) {
+    cv::InterpolationFlags inter = cv::INTER_LINEAR;
+    if (rest.tuple.values.size() > 1) {
+        const std::string& inter_str = rest.tuple[0]->get<String>().value;
+        if (inter_str == "linear") {
+            inter = cv::INTER_LINEAR;
+        } else if (inter_str == "nearest") {
+            inter = cv::INTER_NEAREST;
+        } else {
+            throw InterpreterException("Unknown interpolation parameter");
+        }
+    }
+
+    cv::Mat result;
+    cv::resize(as_mat(image), result, to_size(size), 0.0, 0.0, inter);
+    return from_mat(result);
+}
+
+Image make_image_rect(const Tuple& size, const Tuple& color)
+{
+    const auto cv_size = to_size(size);
+    cv::Mat image(cv_size, CV_8UC3, to_color(color));
+    return from_mat(image);
+}
+
+ValuePtr dbg(const ValuePtr& value) {
+    std::cout << "DEBUG: " << value->to_string() << std::endl;
+    return value;
 }
 
 Bool is_undefined(const Value& value) {
@@ -193,6 +264,8 @@ std::vector<Function> get_stdlib_functions() {
         MAKE_ASAMPL_FUNCTION(load_image),
         MAKE_ASAMPL_FUNCTION(show_image),
         MAKE_ASAMPL_FUNCTION(overlay_image),
+        MAKE_ASAMPL_FUNCTION(scale_image),
+        MAKE_ASAMPL_FUNCTION(make_image_rect),
         MAKE_ASAMPL_FUNCTION(width),
         MAKE_ASAMPL_FUNCTION(height),
         MAKE_ASAMPL_FUNCTION(tuple),

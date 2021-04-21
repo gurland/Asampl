@@ -36,10 +36,14 @@ std::tuple<T&, Ts&...> convert_arguments_impl(Utils::Slice<ValuePtr> args, ArgsR
             return std::tie(convert_argument<T>(args.head()));
         }
     } else {
-        return std::tuple_cat(
-            std::tie(convert_argument<T>(args.head())),
-            convert_arguments_impl<Ts...>(args.tail(), rest)
-        );
+        if (args.size() > 0) {
+            return std::tuple_cat(
+                std::tie(convert_argument<T>(args.head())),
+                convert_arguments_impl<Ts...>(args.tail(), rest)
+            );
+        } else {
+            throw InterpreterException("Not enough arguments");
+        }
     }
 }
 
@@ -48,15 +52,17 @@ std::tuple<Ts&...> convert_arguments(Utils::Slice<ValuePtr> args, ArgsRest& rest
     if constexpr (sizeof...(Ts) == 0) {
         return std::make_tuple();
     } else {
-        return convert_arguments_impl<Ts...>(args, rest);
+        if (args.size() > 0) {
+            return convert_arguments_impl<Ts...>(args, rest);
+        } else {
+            throw InterpreterException("Not enough arguments");
+        }
     }
 }
 
 template<typename R, typename... Args>
 Function make_asampl_function(const char* name, std::function<R(Args...)> func) {
     auto asampl_func = [name, func](Utils::Slice<ValuePtr> args) -> ValuePtr {
-        assert(args.size() >= sizeof...(Args));
-
         ArgsRest rest;
         auto args_tuple = convert_arguments<Args...>(args, rest);
         if constexpr (std::is_same_v<R, void>) {

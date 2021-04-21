@@ -18,6 +18,8 @@ PROGRAM PlayAndSaveVideo {
         icon_salty = 0;
         icon_bitter = 0;
         icon_umami = 0;
+
+        bar_width = 20;
     }
     Actions {
         icon_sweet = load_image('data/sweet.png');
@@ -32,23 +34,23 @@ PROGRAM PlayAndSaveVideo {
         ] {
             offset = 0;
             if (string_contains(taste_value, 'sweet')) {
-                overlay_image(img, icon_sweet, 0, offset);
+                overlay_image(img, icon_sweet, tuple(0, offset));
                 offset = offset + height(icon_sweet);
             }
             if (string_contains(taste_value, 'sour')) {
-                overlay_image(img, icon_sour, 0, offset);
+                overlay_image(img, icon_sour, tuple(0, offset));
                 offset = offset + height(icon_sour);
             }
             if (string_contains(taste_value, 'salty')) {
-                overlay_image(img, icon_salty, 0, offset);
+                overlay_image(img, icon_salty, tuple(0, offset));
                 offset = offset + height(icon_salty);
             }
             if (string_contains(taste_value, 'bitter')) {
-                overlay_image(img, icon_bitter, 0, offset);
+                overlay_image(img, icon_bitter, tuple(0, offset));
                 offset = offset + height(icon_bitter);
             }
             if (string_contains(taste_value, 'umami')) {
-                overlay_image(img, icon_umami, 0, offset);
+                overlay_image(img, icon_umami, tuple(0, offset));
                 offset = offset + height(icon_umami);
             }
 

@@ -1,0 +1,44 @@
+PROGRAM PlayAndSaveVideo {
+    Libraries {
+        average;
+    }
+    Handlers {
+        ffmpeg from 'ffmpeg-handler';
+    }
+    Sources {
+        video from 'data/test.ogv';
+    }
+    Elements {
+	    img = 0;
+        taste_value = '';
+
+        offset = 0;
+
+        icon_sweet = 0;
+        icon_sour = 0;
+        icon_salty = 0;
+        icon_bitter = 0;
+        icon_umami = 0;
+
+        bar = 0;
+        bar_width = 20;
+    }
+    Actions {
+        Timeline from 0 to 20 [
+            Download img from video with ffmpeg;
+        ] {
+            offset = width(img) - bar_width;
+
+            bar = make_image_rect(tuple(bar_width, average_color(img, 0) * height(img) / 255), tuple(255, 0, 0));
+            overlay_image(img, bar, tuple(offset, 0));
+            offset = offset - bar_width;
+            bar = make_image_rect(tuple(bar_width, average_color(img, 1) * height(img) / 255), tuple(0, 255, 0));
+            overlay_image(img, bar, tuple(offset, 0));
+            offset = offset - bar_width;
+            bar = make_image_rect(tuple(bar_width, average_color(img, 2) * height(img) / 255), tuple(0, 0, 255));
+            overlay_image(img, bar, tuple(offset, 0));
+
+            show_image(img);
+        }
+    }
+}

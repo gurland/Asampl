@@ -46,15 +46,15 @@ DownloadResponse ActiveDownload::download() {
 }
 
 std::unique_ptr<IHandler> open_handler(std::filesystem::path path) {
-#ifdef ASAMPL_ENABLE_PYTHON
-    try {
-        return std::make_unique<PythonHandler>(path);
-    } catch (const py::error_already_set&) {}
-#endif
-
     try {
         return std::make_unique<FFIHandler>(path);
     }  catch (...) {}
+
+#ifdef ASAMPL_ENABLE_PYTHON
+    try {
+        return std::make_unique<PythonHandler>(path);
+    } catch (...) {}
+#endif
 
     throw InterpreterException("Coult not open handler " + path.string());
 }
