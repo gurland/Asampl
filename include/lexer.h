@@ -1,167 +1,89 @@
-#pragma once
+#ifndef _LEXER_H
+#define _LEXER_H
 
 #include <string>
 #include <vector>
 #include <fstream>
 #include <iostream>
 
-#define IS_NAME_START(c) (isalpha( (c) ) || (c) == '_')
-#define IS_NAME(c) ( IS_NAME_START( c ) || isdigit(c) )
-#define IS_STRING_LITERAL_START(c) ((c) == '\'' || (c) == '\"')
+enum class token_type {
+    KW_HANDLER,
+    KW_LIBRARY,
+    KW_FROM,
+    KW_IF,
+    KW_WHILE,
+    KW_MATCH,
+    KW_TIMELINE,
+    KW_DOWNLOAD,
+    KW_UPLOAD,
+    KW_TO,
+    KW_FN,
+    KW_LET,
 
-namespace Lexer {
-	enum class TokenType {
-		//Base_Symbols
-		INTEGER,
-		REAL,
+    ID,
+    STRING,
+    NUMBER,
 
-		NUMBER,
+    SEMICOLON,
+    LEFT_BRACE,
+    RIGHT_BRACE,
+    LEFT_SQUARE_BRACKET,
+    RIGHT_SQUARE_BRACKET,
+    COMMA,
+    DOT,
+    COLON,
+    LEFT_BRACKET,
+    RIGHT_BRACKET,
+    PIPE,
+    EQUAL,
 
-		STRING_LITERAL,
-		NAME,
+    DIV_ASSIGNMENT,
+    PLUS_ASSIGNMENT,
+    MINUS_ASSIGNMENT,
+    MULT_ASSIGNMENT,
+    MDIV_ASSIGNMENT,
+    LEFT_SHIFT_ASSIGNMENT,
+    RIGHT_SHIFT_ASSIGNMENT,
+    BIN_AND_ASSIGNMENT,
+    BIN_OR_ASSIGNMENT,
+    BIN_NOR_ASSIGNMENT,
 
-		//True/False
-		LOGIC, //BOOLEAN
+    DIV,
+    PLUS,
+    MINUS,
+    MULT,
+    MDIV,
+    LESS,
+    MORE,
+    BIN_AND,
+    BIN_OR,
+    BIN_NOR,
+    INCREM,
+    DECREM,
 
-		//Math_Operators
-		PLUS,
-		MINUS,
-		MULT,
-		DIV,
+    ARROW,
+    LEFT_SHIFT_OPERATOR,
+    RIGHT_SHIFT_OPERATOR,
 
-		MOD, //May be
+    LEFT_SHIFT,
+    RIGHT_SHIFT,
 
-		CARET,
+    NONE,
+};
 
-		//Logical_Operators
-		AND,
-		OR,
-		NOT,
-		XOR,
+class token {
+public:
+	token() : type(token_type::NONE) {}
+	token(std::string &&_buffer, token_type _type, int _line) :
+		buffer(_buffer), type(_type), line(_line) {}
 
-		EQUAL,
-		NOTEQUAL,
+	std::string	buffer;
+	token_type type;
+	int line;
+};
 
-		MORE,
-		LESS,
-
-		LESS_OR_EQUAL,
-		MORE_OR_EQUAL,
-
-		//Assign
-		ASSIGN, //("=" or "IS")
-
-		//Symbols
-		POINT,
-		COMMA,
-		SEMICOLON,
-		COLON,
-		QUESTION_MARK,
-		EXCLAMATION_MARK,
-
-		LEFT_BRACKET,//"("
-		RIGHT_BRACKET,//")"
-		LEFT_BRACE, //"{"
-		RIGHT_BRACE,//"}"
-		LEFT_SQUARE_BRACKET,//"["
-		RIGHT_SQUARE_BRACKET,//"]"
-
-		APOSTROPHE,
-		QUOTES, // "
-		SLASH, // "/"
-		BACKSLASH, // "\"
-		NUMBER_SIGN, // "#"
-		SOBAKA, //"@"
-
-		AMPERSAND,
-		VERTICAL_BAR,
-
-		//Program key words
-		PROGRAM,
-		LIBRARIES,
-		HANDLERS,
-		RENDERERS,
-		SOURCES,
-		SETS,
-		ELEMENTS,
-		TUPLES,
-		AGGREGATES,
-		ACTIONS,
-
-		//Special key words for
-
-		//Timeline operator
-		TIMELINE,
-		AS,
-		UNTIL,
-		//Sequence handler operator
-		SEQUENCE,
-
-		//IF/Case/while
-		IF,
-		THEN,
-		ELSE,
-		SWITCH,
-		DEFAULT,
-		CASE,
-		OF,
-		WHILE,
-
-		//SUBSTITUTE operator
-		SUBSTITUTE,
-		FOR,
-		WHEN,
-
-		//Download/Render operator
-		DOWNLOAD,
-		FROM,
-		WITH,
-		UPLOAD,
-		TO,
-
-		RENDER,
-		PRINT,
-		//TokenType_WITH,
-
-		COMMENT,
-
-		NOTHING,
-	};
+int split_tokens(std::fstream &fs, std::vector<token> &token_sequence);
+// std::string to_string(token_type type);
 
 
-	class Token
-	{
-		std::string	buffer_;
-		TokenType type_;
-		int line_;
-
-	public:
-		Token() : type_(TokenType::NOTHING)
-		{}
-
-		Token(std::string buffer, TokenType type, int position_in_file) :
-			buffer_(buffer), type_(type), line_(position_in_file)
-		{}
-
-
-		std::string get_buffer() const { return buffer_; }
-		TokenType get_type() const { return type_; }
-		int get_line() { return line_; }
-
-		void set_buffer(std::string buffer) { buffer_ = buffer; }
-		void set_type(TokenType type) { type_ = type; }
-		void set_line(int line) { line_ = line; }
-
-	};
-
-
-
-	//Main function
-	int split_tokens(std::fstream &fs, std::vector<Token> &token_sequence);
-
-	//Print all
-	void token_print(std::vector<Token> &token_sequence);
-
-	std::string to_string(TokenType type);
-
-}
+#endif /* _LEXER_H */

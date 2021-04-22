@@ -1,677 +1,411 @@
-#include "pch.h"
 #include "lexer.h"
 
-#include <iostream>
 #include <fstream>
-#include <algorithm>
-#include <cctype>
-#include <string>
+#include <sstream>
 #include <map>
-
-namespace Lexer {
-
-	struct comp
-	{
-		struct nocase_char_compare
-		{
-			bool operator() (const unsigned char &c1, const unsigned char &c2) const {
-				return tolower (c1) < tolower (c2);
-			}
-		};
-		bool operator() (const std::string &s1, const std::string &s2) const {
-			return std::lexicographical_compare(
-				s1.begin(), s1.end(),
-				s2.begin(), s2.end(),
-				nocase_char_compare());
-		}
-	};
-
-	std::map <std::string, TokenType, comp> program_key_words = {
-
-		{ "PROGRAM", TokenType::PROGRAM },
-		{ "LIBRARIES", TokenType::LIBRARIES },
-		{ "HANDLERS", TokenType::HANDLERS },
-		{ "RENDERERS", TokenType::RENDERERS },
-		{ "SOURCES", TokenType::SOURCES },
-		{ "SETS", TokenType::SETS },
-		{ "ELEMENTS", TokenType::ELEMENTS },
-		{ "TUPLES", TokenType::TUPLES },
-		{ "AGGREGATES", TokenType::AGGREGATES },
-		{ "ACTIONS", TokenType::ACTIONS },
-
-		{ "TIMELINE", TokenType::TIMELINE },
-		{ "AS", TokenType::AS },
-		{ "UNTIL", TokenType::UNTIL },
-		{ "SEQUENCE", TokenType::SEQUENCE },
-
-		{ "IF", TokenType::IF },
-		{ "THEN", TokenType::THEN },
-		{ "ELSE", TokenType::ELSE },
-		{ "SWITCH", TokenType::SWITCH },
-		{ "DEFAULT", TokenType::DEFAULT },
-		{ "CASE", TokenType::CASE },
-		{ "OF", TokenType::OF },
-		{ "WHILE", TokenType::WHILE },
-
-		{ "SUBSTITUTE", TokenType::SUBSTITUTE },
-		{ "FOR", TokenType::FOR },
-		{ "WHEN", TokenType::WHEN },
-
-		{ "DOWNLOAD", TokenType::DOWNLOAD },
-		{ "FROM", TokenType::FROM },
-		{ "WITH", TokenType::WITH },
-		{ "UPLOAD", TokenType::UPLOAD },
-		{ "TO", TokenType::TO },
-
-		{ "RENDER", TokenType::RENDER },
-
-		{ "PRINT", TokenType::PRINT },
-
-		{ "AND", TokenType::AND },
-		{ "OR", TokenType::OR },
-		{ "XOR", TokenType::NOT },
-		{ "NOT", TokenType::XOR },
-
-		{ "IS", TokenType::ASSIGN },
-
-		{ "TRUE", TokenType::LOGIC },
-		{ "FALSE", TokenType::LOGIC },
-
-	};
-
-	int current_line_position = 0;
-
-
-
-	inline static int token_operator(std::fstream &fs, Token *token_to_add)
-	{
-
-		if (fs.peek() == '-')
-		{
-			token_to_add->set_buffer("-");
-			token_to_add->set_type(TokenType::MINUS);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '+')
-		{
-			token_to_add->set_buffer("+");
-			token_to_add->set_type(TokenType::PLUS);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '*')
-		{
-			token_to_add->set_buffer("*");
-			token_to_add->set_type(TokenType::MULT);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '/')
-		{
-			fs.get();
-			if (fs.peek() == '/') {
-				std::string comment = "";
-				while (fs.peek() != '\n') {
-					comment += fs.get();;
-					token_to_add->set_buffer(comment);
-					token_to_add->set_type(TokenType::COMMENT);
-					token_to_add->set_line(current_line_position);
-				}
-				return 0;
-			}
-			else {
-				token_to_add->set_buffer("/");
-				token_to_add->set_type(TokenType::DIV);
-				token_to_add->set_line(current_line_position);
-				return 0;
-			}
-
-		}
-
-		else if (fs.peek() == '%')
-		{
-			token_to_add->set_buffer("%");
-			token_to_add->set_type(TokenType::MOD);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '<')
-		{
-			fs.get();
-			if (fs.peek() == '=') {
-				token_to_add->set_buffer("<=");
-				token_to_add->set_type(TokenType::LESS_OR_EQUAL);
-				token_to_add->set_line(current_line_position);
-				fs.get();
-				return 0;
-			}
-			else {
-				token_to_add->set_buffer("<");
-				token_to_add->set_type(TokenType::LESS);
-				token_to_add->set_line(current_line_position);
-				return 0;
-			}
-		}
-
-		else if (fs.peek() == '>')
-		{
-			fs.get();
-			if (fs.peek() == '=') {
-				token_to_add->set_buffer(">=");
-				token_to_add->set_type(TokenType::MORE_OR_EQUAL);
-				token_to_add->set_line(current_line_position);
-				fs.get();
-				return 0;
-			}
-			else {
-				token_to_add->set_buffer(">");
-				token_to_add->set_type(TokenType::MORE);
-				token_to_add->set_line(current_line_position);
-				return 0;
-			}
-		}
-
-		else if (fs.peek() == '=')
-		{
-			fs.get();
-			if (fs.peek() == '=') {
-				token_to_add->set_buffer("==");
-				token_to_add->set_type(TokenType::EQUAL);
-				token_to_add->set_line(current_line_position);
-				fs.get();
-				return 0;
-			}
-			else {
-				token_to_add->set_buffer("=");
-				token_to_add->set_type(TokenType::ASSIGN);
-				token_to_add->set_line(current_line_position);
-				return 0;
-			}
-		}
-
-		else if (fs.peek() == '!')
-		{
-			fs.get();
-			if (fs.peek() == '=') {
-				token_to_add->set_buffer("!=");
-				token_to_add->set_type(TokenType::NOTEQUAL);
-				token_to_add->set_line(current_line_position);
-				fs.get();
-				return 0;
-			}
-			else {
-				token_to_add->set_buffer("!");
-				token_to_add->set_type(TokenType::NOT);
-				token_to_add->set_line(current_line_position);
-				return 0;
-			}
-		}
-
-		else if (fs.peek() == '?')
-		{
-			token_to_add->set_buffer("?");
-			token_to_add->set_type(TokenType::QUESTION_MARK);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '^')
-		{
-			token_to_add->set_buffer("^");
-			token_to_add->set_type(TokenType::CARET);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '&')
-		{
-			fs.get();
-			if (fs.peek() == '&') {
-				token_to_add->set_buffer("&&");
-				token_to_add->set_type(TokenType::AND);
-				token_to_add->set_line(current_line_position);
-				fs.get();
-				return 0;
-			}
-			else {
-				token_to_add->set_buffer("&");
-				token_to_add->set_type(TokenType::AMPERSAND);
-				token_to_add->set_line(current_line_position);
-				return 0;
-			}
-		}
-
-		else if (fs.peek() == '|')
-		{
-			fs.get();
-			if (fs.peek() == '|') {
-				token_to_add->set_buffer("||");
-				token_to_add->set_type(TokenType::OR);
-				token_to_add->set_line(current_line_position);
-				fs.get();
-				return 0;
-			}
-			else {
-				token_to_add->set_buffer("|");
-				token_to_add->set_type(TokenType::VERTICAL_BAR);
-				token_to_add->set_line(current_line_position);
-				return 0;
-			}
-		}
-
-		else if (fs.peek() == ':')
-		{
-			token_to_add->set_buffer(":");
-			token_to_add->set_type(TokenType::COLON);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-		else if (fs.peek() == ';')
-		{
-			token_to_add->set_buffer(";");
-			token_to_add->set_type(TokenType::SEMICOLON);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '.')
-		{
-			token_to_add->set_buffer(".");
-			token_to_add->set_type(TokenType::POINT);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == ',')
-		{
-			token_to_add->set_buffer(",");
-			token_to_add->set_type(TokenType::COMMA);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '#')
-		{
-			token_to_add->set_buffer("#");
-			token_to_add->set_type(TokenType::NUMBER_SIGN);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-
-		}
-
-		else if (fs.peek() == '@')
-		{
-			token_to_add->set_buffer("-");
-			token_to_add->set_type(TokenType::SOBAKA);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-
-		else if (fs.peek() == '(')
-		{
-			token_to_add->set_buffer("(");
-			token_to_add->set_type(TokenType::LEFT_BRACKET);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-		else if (fs.peek() == ')')
-		{
-			token_to_add->set_buffer(")");
-			token_to_add->set_type(TokenType::RIGHT_BRACKET);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-		else if (fs.peek() == '{')
-		{
-			token_to_add->set_buffer("{");
-			token_to_add->set_type(TokenType::LEFT_BRACE);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-		else if (fs.peek() == '}')
-		{
-			token_to_add->set_buffer("}");
-			token_to_add->set_type(TokenType::RIGHT_BRACE);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-		else if (fs.peek() == '[')
-		{
-			token_to_add->set_buffer("[");
-			token_to_add->set_type(TokenType::LEFT_SQUARE_BRACKET);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-		else if (fs.peek() == ']')
-		{
-			token_to_add->set_buffer("]");
-			token_to_add->set_type(TokenType::RIGHT_SQUARE_BRACKET);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return 0;
-		}
-		else if (fs.peek() == EOF)
-		{
-			return 1;
-		}
-
-		else
-		{
-			token_to_add->set_buffer("ERROR");
-			token_to_add->set_type(TokenType::NOTHING);
-			token_to_add->set_line(current_line_position);
-			fs.get();
-			return -1;
-		}
-	}
-
-	inline static int token_string_literal(std::fstream &fs, Token *token_to_add) {
-
-		std::string buffer;
-
-		if (fs.peek() == '\'') {
-			fs.get();
-
-			while (fs.peek() != '\'') {
-				if (fs.peek() == '\n' || fs.peek() == EOF) break;
-
-				buffer += (char)fs.get();
-			}
-		}
-		else {
-			while (fs.peek() != '\"') {
-				if (fs.peek() == '\n' || fs.peek() == EOF) break;
-
-				buffer += (char)fs.get();
-			}
-		}
-
-		fs.get();
-
-		token_to_add->set_buffer(buffer);
-		token_to_add->set_type(TokenType::STRING_LITERAL);
-		token_to_add->set_line(current_line_position);
-		return 0;
-	}
-
-	inline static int token_digit(std::fstream &fs, Token *token_to_add)
-	{
-		std::string buffer;
-
-		buffer.clear();
-		//int n = 0;
-
-		int state = 0;
-
-		while (fs.peek() != EOF) {
-
-			switch (state)
-			{
-			case 0:
-
-				if (isdigit(fs.peek())) {
-					buffer += (char)fs.get();
-				}
-				else if (fs.peek() == '.') {
-					buffer += (char)fs.get();
-					state = 0;
-				}
-				else {
-					token_to_add->set_buffer(buffer);
-					token_to_add->set_type(TokenType::NUMBER);
-					token_to_add->set_line(current_line_position);
-					return 1;
-				}
-				break;
-
-			case 1:
-
-				if (isdigit(fs.peek())) {
-					buffer += (char)fs.get();
-				}
-				else {
-					token_to_add->set_buffer(buffer);
-					token_to_add->set_type(TokenType::NUMBER);
-					token_to_add->set_line(current_line_position);
-					return 0;
-				}
-				break;
-			}
-
-
-		}
-
-		return 0;
-
-	}
-
-	inline static int token_name(std::fstream &fs, Token *token_to_add)
-	{
-
-		std::string buffer;
-		//int n = 0;
-
-		while (fs.peek() != EOF) {
-			if (!IS_NAME(fs.peek())) {
-				break;
-			}
-			else {
-				buffer += (char)fs.get();
-			}
-		}
-
-		token_to_add->set_buffer(buffer);
-		token_to_add->set_line(current_line_position);
-
-		auto Lexem = program_key_words.find(buffer);
-
-		if (Lexem != program_key_words.end()) {
-			token_to_add->set_type(Lexem->second);
-		}
-		else {
-			token_to_add->set_type(TokenType::NAME);
-		}
-
-		return 0;
-	}
-
-
-	//Ignore TAB, new lines, spaces
-	inline static int skip_spaces(std::fstream &fs) {
-
-		while (isspace(fs.peek()) || fs.peek() == '\n' || fs.peek() == '\t') {
-			if (fs.peek() == '\n') {
-				current_line_position++;
-			}
-			fs.get();
-		}
-		return 0;
-	}
-
-
-	int split_tokens(std::fstream &fs, std::vector<Token> &token_sequence) {
-
-		if (!fs.is_open()) return 1;
-
-		skip_spaces(fs);
-		while (fs.peek() != EOF) {
-
-			Token *token_to_add = new Token();
-
-			if (IS_NAME_START(fs.peek())) {
-				token_name(fs, token_to_add);
-			} else if (isdigit(fs.peek())) {
-				token_digit(fs, token_to_add);
-			} else if (IS_STRING_LITERAL_START(fs.peek())) {
-				token_string_literal(fs, token_to_add);
-			} else {
-				token_operator(fs, token_to_add);
-			}
-
-			if (token_to_add->get_type() == TokenType::NOTHING) {
-				return -1;
-			}
-
-			token_sequence.push_back(*token_to_add);
-			skip_spaces(fs);
-		}
-		return 0;
-
-	}
-
-	void token_print(std::vector<Token> &token_sequence)
-	{
-		for (const auto &token : token_sequence) {
-			std::string str = "\t\tType: ";
-			if ((token.get_buffer().length() <= 8)) {
-				str = "\t\t\tType: ";
-			}
-			else if ((token.get_buffer().length() > 16)) {
-				str = "\tType: ";
-			}
-			std::cout <<
-				"Lexem: " << token.get_buffer() <<
-				str << to_string(token.get_type()) << "\n";
-		}
-	}
-
-	std::string to_string(TokenType type) {
-		switch (type) {
-			//Base_Symbols
-		case TokenType::INTEGER: return "INTEGER";
-		case TokenType::REAL: return "REAL";
-		case TokenType::NUMBER: return "NUMBER";
-
-
-		case TokenType::STRING_LITERAL: return "STRING_LITERAL";
-		case TokenType::NAME: return "NAME";
-
-			//True/False
-		case TokenType::LOGIC: return "LOGIC"; //BOOLEAN
-
-			//Math_Operators
-		case TokenType::PLUS: return "PLUS";
-		case TokenType::MINUS: return "MINUS";
-		case TokenType::MULT: return "MULT";
-		case TokenType::DIV: return "DIV";
-
-		case TokenType::MOD: return "MOD"; //May be
-
-		case TokenType::CARET: return "CARET";
-
-			//Logical_Operators
-		case TokenType::AND: return "AND";
-		case TokenType::OR: return "OR";
-		case TokenType::NOT: return "NOT";
-		case TokenType::XOR: return "XOR";
-
-		case TokenType::EQUAL: return "EQUAL";
-		case TokenType::NOTEQUAL: return "NOTEQUAL";
-
-		case TokenType::MORE: return "MORE";
-		case TokenType::LESS: return "LESS";
-
-		case TokenType::LESS_OR_EQUAL: return "LESS_OR_EQUAL";
-		case TokenType::MORE_OR_EQUAL: return "MORE_OR_EQUAL";
-
-			//Assign
-		case TokenType::ASSIGN: return "ASSIGN"; //("=" or "IS")
-
-			//Symbols
-		case TokenType::POINT: return "POINT";
-		case TokenType::COMMA: return "COMMA";
-		case TokenType::SEMICOLON: return "SEMICOLON";
-		case TokenType::COLON: return "COLON";
-		case TokenType::QUESTION_MARK: return "QUESTION_MARK";
-		case TokenType::EXCLAMATION_MARK: return "EXCLAMATION_MARK";
-
-		case TokenType::LEFT_BRACKET: return "LEFT_BRACKET";//"("
-		case TokenType::RIGHT_BRACKET: return "RIGHT_BRACKET";//")"
-		case TokenType::LEFT_BRACE: return "LEFT_BRACE"; //"{"
-		case TokenType::RIGHT_BRACE: return "RIGHT_BRACE";//"}"
-		case TokenType::LEFT_SQUARE_BRACKET: return "LEFT_SQUARE_BRACKET";//"["
-		case TokenType::RIGHT_SQUARE_BRACKET: return "RIGHT_SQUARE_BRACKET";//"]"
-
-		case TokenType::APOSTROPHE: return "APOSTROPHE";
-		case TokenType::QUOTES: return "QUOTES"; // "
-		case TokenType::SLASH: return "SLASH"; // "/"
-		case TokenType::BACKSLASH: return "BACKSLASH"; // "\"
-		case TokenType::NUMBER_SIGN: return "NUMBER_SIGN"; // "#"
-		case TokenType::SOBAKA: return "SOBAKA"; //"@"
-
-		case TokenType::AMPERSAND: return "AMPERSAND";
-		case TokenType::VERTICAL_BAR: return "VERTICAL_BAR";
-
-			//Program key words
-		case TokenType::PROGRAM: return "PROGRAM";
-		case TokenType::LIBRARIES: return "LIBRARIES";
-		case TokenType::HANDLERS: return "HANDLERS";
-		case TokenType::RENDERERS: return "RENDERERS";
-		case TokenType::SOURCES: return "SOURCES";
-		case TokenType::SETS: return "SETS";
-		case TokenType::ELEMENTS: return "ELEMENTS";
-		case TokenType::TUPLES: return "TUPLES";
-		case TokenType::AGGREGATES: return "AGGREGATES";
-		case TokenType::ACTIONS: return "ACTIONS";
-
-			//Special key words for
-
-			//Timeline operator
-		case TokenType::TIMELINE: return "TIMELINE";
-		case TokenType::AS: return "AS";
-		case TokenType::UNTIL: return "UNTIL";
-			//Sequence handler operator
-		case TokenType::SEQUENCE: return "SEQUENCE";
-
-			//IF/Case
-		case TokenType::IF: return "IF";
-		case TokenType::THEN: return "THEN";
-		case TokenType::ELSE: return "ELSE";
-		case TokenType::CASE: return "CASE";
-		case TokenType::OF: return "OF";
-
-			//SUBSTITUTE operator
-		case TokenType::SUBSTITUTE: return "SUBSTITUTE";
-		case TokenType::FOR: return "FOR";
-		case TokenType::WHEN: return "WHEN";
-
-			//Download/Render operator
-		case TokenType::DOWNLOAD: return "DOWNLOAD";
-		case TokenType::FROM: return "FROM";
-		case TokenType::WITH: return "WITH";
-		case TokenType::UPLOAD: return "UPLOAD";
-		case TokenType::TO: return "TO";
-
-		case TokenType::RENDER: return "RENDER";
-			//TokenType_WITH,
-
-		case TokenType::COMMENT: return "COMMENT";
-
-		case TokenType::NOTHING: return "NOTHING";
-		default: return "";
-		}
-	}
-
+#include <algorithm>
+
+#define is_name_part(c) \
+    (isalpha((c)) || c == '_' || c == '-' || isdigit((c)))
+
+#define contains(container, val) \
+    (std::find((container).begin(), (container).end(), (val)) != (container).end())
+
+enum class lexer_state {
+	NONE,
+	WORD,
+    NUM_OR_WORD,
+	STRING,
+	// COMMENT_OR_ASSIGN,
+
+    // START_OPERATOR,
+    DIV_OPERATOR,
+    PLUS_OPERATOR,
+    MINUS_OPERATOR,
+    MULT_OPERATOR,
+    MDIV_OPERATOR,
+    LESS_OPERATOR,
+    MORE_OPERATOR,
+    BIN_AND_OPERATOR,
+    BIN_OR_OPERATOR,
+    BIN_NOR_OPERATOR,
+    // END_OPERATOR,
+
+    LEFT_SHIFT,
+    RIGHT_SHIFT,
+};
+
+static std::map<std::string, token_type> key_words = {
+    {"handler",  token_type::KW_HANDLER},
+    {"library",  token_type::KW_LIBRARY},
+    {"from",     token_type::KW_FROM},
+    {"if",       token_type::KW_IF},
+    {"while",    token_type::KW_WHILE},
+    {"match",    token_type::KW_MATCH},
+    {"timeline", token_type::KW_TIMELINE},
+    {"download", token_type::KW_DOWNLOAD},
+    {"updload",  token_type::KW_UPLOAD},
+    {"to",       token_type::KW_TO},
+    {"fn",       token_type::KW_FN},
+    {"let",      token_type::KW_LET},
+};
+
+static std::vector<token_type> delay_types = {
+    token_type::KW_HANDLER,
+    token_type::KW_LIBRARY,
+    token_type::KW_FROM,
+    token_type::KW_IF,
+    token_type::KW_WHILE,
+    token_type::KW_MATCH,
+    token_type::KW_TIMELINE,
+    token_type::KW_DOWNLOAD,
+    token_type::KW_UPLOAD,
+    token_type::KW_TO,
+    token_type::KW_FN,
+    token_type::KW_LET,
+
+    token_type::ID,
+    token_type::NUMBER,
+
+    token_type::DIV,
+    token_type::PLUS,
+    token_type::MINUS,
+    token_type::MULT,
+    token_type::MDIV,
+    token_type::LESS,
+    token_type::MORE,
+    token_type::BIN_AND,
+    token_type::BIN_OR,
+    token_type::BIN_NOR,
+    token_type::INCREM,
+    token_type::DECREM,
+
+    token_type::LEFT_SHIFT,
+    token_type::RIGHT_SHIFT,
+};
+
+static std::vector<lexer_state> wrt_states = {
+    lexer_state::WORD,
+	lexer_state::STRING,
+	lexer_state::NUM_OR_WORD,
+};
+
+using str_cit = std::string::const_iterator;
+
+static int line = 0;
+static lexer_state state = lexer_state::NONE;
+
+static inline char get_next_char(str_cit &it) {
+    return *(++it);
 }
+
+static void get_to_next_line(str_cit &it) {
+    ++line;
+    while(get_next_char(it) != '\n') {}
+    get_next_char(it);
+}
+
+static void get_to_next_nospace(str_cit &it) {
+    char c = 0;
+    while(c = get_next_char(it), isspace(c) || c == '\n')
+        if (c == '\n')
+            ++line;
+}
+
+static void get_to_next(str_cit &it) {
+    ++it;
+}
+
+static void write_to_buf(std::string &buf, char c) {
+    switch(state) {
+        case lexer_state::STRING:
+            if (!(buf.length() == 1 && buf.back() == '\"'))
+                buf.push_back(c);
+            break;
+        default:
+            if (c != ' ')
+                buf.push_back(c);
+    }
+}
+
+static bool store_buf(token_type ttype) {
+    switch(ttype) {
+        case token_type::ID:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static void file_promotion(str_cit &it) {
+    switch(state) {
+        case lexer_state::STRING:
+        case lexer_state::WORD:
+        case lexer_state::NUM_OR_WORD:
+            get_to_next(it);
+            break;
+        default:
+            get_to_next_nospace(it);
+    }
+}
+
+#define _SIMPLE_CASE(match_val, var, val)       \
+    case match_val:                             \
+        var = val;                              \
+        break;                                  \
+
+static token_type state_none_handle(const std::string &buf, char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE(';', ttype, token_type::SEMICOLON)
+        _SIMPLE_CASE('{', ttype, token_type::LEFT_BRACE)
+        _SIMPLE_CASE('}', ttype, token_type::RIGHT_BRACE)
+        _SIMPLE_CASE('[', ttype, token_type::LEFT_SQUARE_BRACKET)
+        _SIMPLE_CASE(']', ttype, token_type::RIGHT_SQUARE_BRACKET)
+        _SIMPLE_CASE(',', ttype, token_type::COMMA)
+        _SIMPLE_CASE('.', ttype, token_type::DOT)
+        _SIMPLE_CASE(':', ttype, token_type::COLON)
+        _SIMPLE_CASE('(', ttype, token_type::LEFT_BRACKET)
+        _SIMPLE_CASE(')', ttype, token_type::RIGHT_BRACKET)
+        _SIMPLE_CASE('=', ttype, token_type::EQUAL)
+        _SIMPLE_CASE('\"', state, lexer_state::STRING)
+        _SIMPLE_CASE('/', state, lexer_state::DIV_OPERATOR)
+        _SIMPLE_CASE('+', state, lexer_state::PLUS_OPERATOR)
+        _SIMPLE_CASE('-', state, lexer_state::MINUS_OPERATOR)
+        _SIMPLE_CASE('*', state, lexer_state::MULT_OPERATOR)
+        _SIMPLE_CASE('%', state, lexer_state::MDIV_OPERATOR)
+        _SIMPLE_CASE('<', state, lexer_state::LESS_OPERATOR)
+        _SIMPLE_CASE('>', state, lexer_state::MORE_OPERATOR)
+        _SIMPLE_CASE('&', state, lexer_state::BIN_AND_OPERATOR)
+        _SIMPLE_CASE('|', state, lexer_state::BIN_OR_OPERATOR)
+        _SIMPLE_CASE('^', state, lexer_state::BIN_NOR_OPERATOR)
+        default: {
+            if (isdigit(c)) {
+                state = lexer_state::NUM_OR_WORD;
+            } else if (is_name_part(c)) {
+                state = lexer_state::WORD;
+            }
+        }
+    }
+    return ttype;
+}
+
+static token_type state_string_handle(const std::string &buf, char c) {
+    token_type ttype = token_type::NONE;
+    if ((buf.length() > 0 && c == '\"' && buf.back() != '\\') ||
+        (buf.length() == 0 && c == '\"')) {
+        ttype = token_type::STRING;
+    }
+
+    return ttype;
+}
+
+static token_type state_word_handle(const std::string &buf, char c) {
+    token_type ttype = token_type::NONE;
+    auto kw_it = key_words.find(buf);
+    if (kw_it != key_words.end()) {
+        ttype = kw_it->second;
+    } else if (!is_name_part(c)) {
+        ttype = token_type::ID;
+    }
+    return ttype;
+}
+
+static token_type state_num_or_word_handle(const std::string &buf, char c) {
+    token_type ttype = token_type::NONE;
+    if (!isdigit(c)) {
+        if (is_name_part(c)) {
+            state = lexer_state::WORD;
+            ttype = state_word_handle(buf, c);
+        } else {
+            ttype = token_type::NUMBER;
+        }
+    }
+    return ttype;
+}
+
+static token_type state_div_operator_handler(str_cit &it) {
+    token_type ttype = token_type::NONE;
+    switch(*it) {
+        case '/':
+            state = lexer_state::NONE;
+            get_to_next_line(it);
+            break;
+        _SIMPLE_CASE('=', ttype, token_type::DIV_ASSIGNMENT)
+        default:
+            ttype = token_type::DIV;
+    }
+    return ttype;
+}
+
+static token_type state_plus_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::PLUS_ASSIGNMENT)
+        _SIMPLE_CASE('+', ttype, token_type::INCREM)
+        default:
+            ttype = token_type::PLUS;
+    }
+    return ttype;
+}
+
+static token_type state_minus_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::MINUS_ASSIGNMENT)
+        _SIMPLE_CASE('-', ttype, token_type::DECREM)
+        _SIMPLE_CASE('>', ttype, token_type::ARROW)
+        default:
+            ttype = token_type::MINUS;
+    }
+    return ttype;
+}
+
+static token_type state_mult_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::MULT_ASSIGNMENT)
+        default:
+            ttype = token_type::MULT;
+    }
+    return ttype;
+}
+
+static token_type state_mdiv_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::MDIV_ASSIGNMENT)
+        default:
+            ttype = token_type::MDIV;
+    }
+    return ttype;
+}
+
+static token_type state_less_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::LEFT_SHIFT)
+        default:
+            ttype = token_type::LESS;
+    }
+    return ttype;
+}
+
+static token_type state_left_shift_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::LEFT_SHIFT_ASSIGNMENT)
+        default:
+            ttype = token_type::LEFT_SHIFT;
+    }
+    return ttype;
+}
+
+static token_type state_more_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('>', state, lexer_state::RIGHT_SHIFT)
+        default:
+            ttype = token_type::MORE;
+    }
+    return ttype;
+}
+
+static token_type state_right_shift_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::RIGHT_SHIFT_ASSIGNMENT)
+        default:
+            ttype = token_type::RIGHT_SHIFT;
+    }
+    return ttype;
+}
+
+static token_type state_bin_and_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::BIN_AND_ASSIGNMENT)
+        default:
+            ttype = token_type::BIN_AND;
+    }
+    return ttype;
+}
+
+static token_type state_bin_or_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::BIN_OR_ASSIGNMENT)
+        default:
+            ttype = token_type::BIN_OR;
+    }
+    return ttype;
+}
+
+static token_type state_bin_nor_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::BIN_NOR_ASSIGNMENT)
+        default:
+            ttype = token_type::BIN_NOR;
+    }
+    return ttype;
+}
+
+
+
+int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
+    std::string file_contents = std::string(std::istreambuf_iterator<char>(file),
+                                            std::istreambuf_iterator<char>());
+    str_cit it = file_contents.cbegin();
+    std::string buf = "";
+    token_type ttype = token_type::NONE;
+    bool get_next = true;
+
+    while(it != file_contents.end()) {
+        get_next = true;
+        switch(state) {
+            _SIMPLE_CASE(lexer_state::NONE, ttype, state_none_handle(buf, *it))
+            _SIMPLE_CASE(lexer_state::STRING, ttype, state_string_handle(buf, *it))
+            _SIMPLE_CASE(lexer_state::WORD, ttype, state_word_handle(buf, *it))
+            _SIMPLE_CASE(lexer_state::NUM_OR_WORD, ttype, state_num_or_word_handle(buf, *it))
+
+            _SIMPLE_CASE(lexer_state::DIV_OPERATOR, ttype, state_div_operator_handler(it))
+            _SIMPLE_CASE(lexer_state::PLUS_OPERATOR, ttype, state_plus_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::MINUS_OPERATOR, ttype, state_minus_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::MULT_OPERATOR, ttype, state_mult_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::MDIV_OPERATOR, ttype, state_mdiv_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::LESS_OPERATOR, ttype, state_less_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::MORE_OPERATOR, ttype, state_more_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::BIN_AND_OPERATOR, ttype, state_bin_and_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::BIN_OR_OPERATOR, ttype, state_bin_or_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::BIN_NOR_OPERATOR, ttype, state_bin_nor_operator_handler(*it))
+
+            _SIMPLE_CASE(lexer_state::LEFT_SHIFT, ttype, state_left_shift_handler(*it))
+            _SIMPLE_CASE(lexer_state::RIGHT_SHIFT, ttype, state_right_shift_handler(*it))
+        }
+
+        if (ttype != token_type::NONE) {
+            token_sequence.emplace_back((store_buf(ttype)) ? buf : "", ttype, line);
+            state = lexer_state::NONE;
+            buf.clear();
+            if (contains(delay_types, ttype)) {
+                get_next = false;
+            }
+            ttype = token_type::NONE;
+        }
+
+        if (contains(wrt_states, state)) {
+            write_to_buf(buf, *it);
+        }
+
+        if (get_next) {
+            file_promotion(it);
+        }
+    }
+    return 0;
+}
+
+
+// std::string to_string(token_type type) {
+//     return
+// }
