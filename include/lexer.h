@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <variant>
 
 enum class token_type {
     KW_HANDLER,
@@ -19,6 +20,8 @@ enum class token_type {
     KW_TO,
     KW_FN,
     KW_LET,
+    KW_TRUE,
+    KW_FALSE,
 
     ID,
     STRING,
@@ -73,13 +76,16 @@ enum class token_type {
 
 class token {
 public:
-	token() : type(token_type::NONE) {}
-	token(std::string &&_buffer, token_type _type, int _line) :
-		buffer(_buffer), type(_type), line(_line) {}
+    token() : type(token_type::NONE) {}
+    token(const std::string &_buffer, token_type _type, int _line) :
+        buffer(_buffer), type(_type), line(_line) {}
 
-	std::string	buffer;
-	token_type type;
-	int line;
+    token(int, token_type _type, int _line) :
+        buffer(0), type(_type), line(_line) {}
+
+    std::variant<int, std::string> buffer;
+    token_type type;
+    int line;
 };
 
 int split_tokens(std::fstream &fs, std::vector<token> &token_sequence);

@@ -48,6 +48,8 @@ static std::map<std::string, token_type> key_words = {
     {"to",       token_type::KW_TO},
     {"fn",       token_type::KW_FN},
     {"let",      token_type::KW_LET},
+    {"true",     token_type::KW_TRUE},
+    {"false",    token_type::KW_FALSE},
 };
 
 static std::vector<token_type> delay_types = {
@@ -385,7 +387,12 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
         }
 
         if (ttype != token_type::NONE) {
-            token_sequence.emplace_back((store_buf(ttype)) ? buf : "", ttype, line);
+            if (store_buf(ttype)) {
+                token_sequence.emplace_back(buf, ttype, line);
+            } else {
+                token_sequence.emplace_back((int)0, ttype, line);
+            }
+            // token_sequence.emplace_back((store_buf(ttype)) ? buf : (int)0, ttype, line);
             state = lexer_state::NONE;
             buf.clear();
             if (contains(delay_types, ttype)) {
