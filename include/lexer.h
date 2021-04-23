@@ -89,7 +89,7 @@ public:
 };
 
 int split_tokens(std::fstream &fs, std::vector<token> &token_sequence);
-// std::string to_string(token_type type);
+std::string to_string(token_type type);
 
 
 #endif /* _LEXER_H */

@@ -413,6 +413,73 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
 }
 
 
-// std::string to_string(token_type type) {
-//     return
-// }
+std::string to_string(token_type type) {
+    std::string buf = "";
+    switch(type) {
+        _SIMPLE_CASE(token_type::KW_HANDLER, buf, "KW_HANDLER")
+        _SIMPLE_CASE(token_type::KW_LIBRARY, buf, "KW_LIBRARY")
+        _SIMPLE_CASE(token_type::KW_FROM, buf, "KW_FROM")
+        _SIMPLE_CASE(token_type::KW_IF, buf, "KW_IF")
+        _SIMPLE_CASE(token_type::KW_WHILE, buf, "KW_WHILE")
+        _SIMPLE_CASE(token_type::KW_MATCH, buf, "KW_MATCH")
+        _SIMPLE_CASE(token_type::KW_TIMELINE, buf, "KW_TIMELINE")
+        _SIMPLE_CASE(token_type::KW_DOWNLOAD, buf, "KW_DOWNLOAD")
+        _SIMPLE_CASE(token_type::KW_UPLOAD, buf, "KW_UPLOAD")
+        _SIMPLE_CASE(token_type::KW_TO, buf, "KW_TO")
+        _SIMPLE_CASE(token_type::KW_FN, buf, "KW_FN")
+        _SIMPLE_CASE(token_type::KW_LET, buf, "KW_LET")
+        _SIMPLE_CASE(token_type::KW_TRUE, buf, "KW_TRUE")
+        _SIMPLE_CASE(token_type::KW_FALSE, buf, "KW_FALSE")
+
+        _SIMPLE_CASE(token_type::ID, buf, "ID")
+        _SIMPLE_CASE(token_type::STRING, buf, "STRING")
+        _SIMPLE_CASE(token_type::NUMBER, buf, "NUMBER")
+
+        _SIMPLE_CASE(token_type::SEMICOLON, buf, "SEMICOLON")
+        _SIMPLE_CASE(token_type::LEFT_BRACE, buf, "LEFT_BRACE")
+        _SIMPLE_CASE(token_type::RIGHT_BRACE, buf, "RIGHT_BRACE")
+        _SIMPLE_CASE(token_type::LEFT_SQUARE_BRACKET, buf, "LEFT_SQUARE_BRACKET")
+        _SIMPLE_CASE(token_type::RIGHT_SQUARE_BRACKET, buf, "RIGHT_SQUARE_BRACKET")
+        _SIMPLE_CASE(token_type::COMMA, buf, "COMMA")
+        _SIMPLE_CASE(token_type::DOT, buf, "DOT")
+        _SIMPLE_CASE(token_type::COLON, buf, "COLON")
+        _SIMPLE_CASE(token_type::LEFT_BRACKET, buf, "LEFT_BRACKET")
+        _SIMPLE_CASE(token_type::RIGHT_BRACKET, buf, "RIGHT_BRACKET")
+        _SIMPLE_CASE(token_type::PIPE, buf, "PIPE")
+        _SIMPLE_CASE(token_type::EQUAL, buf, "EQUAL")
+
+        _SIMPLE_CASE(token_type::DIV_ASSIGNMENT, buf, "DIV_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::PLUS_ASSIGNMENT, buf, "PLUS_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::MINUS_ASSIGNMENT, buf, "MINUS_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::MULT_ASSIGNMENT, buf, "MULT_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::MDIV_ASSIGNMENT, buf, "MDIV_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::LEFT_SHIFT_ASSIGNMENT, buf, "LEFT_SHIFT_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::RIGHT_SHIFT_ASSIGNMENT, buf, "RIGHT_SHIFT_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::BIN_AND_ASSIGNMENT, buf, "BIN_AND_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::BIN_OR_ASSIGNMENT, buf, "BIN_OR_ASSIGNMENT")
+        _SIMPLE_CASE(token_type::BIN_NOR_ASSIGNMENT, buf, "BIN_NOR_ASSIGNMENT")
+
+        _SIMPLE_CASE(token_type::DIV, buf, "DIV")
+        _SIMPLE_CASE(token_type::PLUS, buf, "PLUS")
+        _SIMPLE_CASE(token_type::MINUS, buf, "MINUS")
+        _SIMPLE_CASE(token_type::MULT, buf, "MULT")
+        _SIMPLE_CASE(token_type::MDIV, buf, "MDIV")
+        _SIMPLE_CASE(token_type::LESS, buf, "LESS")
+        _SIMPLE_CASE(token_type::MORE, buf, "MORE")
+        _SIMPLE_CASE(token_type::BIN_AND, buf, "BIN_AND")
+        _SIMPLE_CASE(token_type::BIN_OR, buf, "BIN_OR")
+        _SIMPLE_CASE(token_type::BIN_NOR, buf, "BIN_NOR")
+        _SIMPLE_CASE(token_type::INCREM, buf, "INCREM")
+        _SIMPLE_CASE(token_type::DECREM, buf, "DECREM")
+
+        _SIMPLE_CASE(token_type::ARROW, buf, "ARROW")
+        _SIMPLE_CASE(token_type::LEFT_SHIFT_OPERATOR, buf, "LEFT_SHIFT_OPERATOR")
+        _SIMPLE_CASE(token_type::RIGHT_SHIFT_OPERATOR, buf, "RIGHT_SHIFT_OPERATOR")
+
+        _SIMPLE_CASE(token_type::LEFT_SHIFT, buf, "LEFT_SHIFT")
+        _SIMPLE_CASE(token_type::RIGHT_SHIFT, buf, "RIGHT_SHIFT")
+
+        _SIMPLE_CASE(token_type::NONE, buf, "NONE")
+    }
+    return buf;
+}
