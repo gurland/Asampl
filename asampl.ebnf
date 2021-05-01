@@ -1,0 +1,150 @@
+Asampl 
+
+program = 'Program', ID, '{',
+    [ libraries_section ],
+    [ handlers_section ],
+    [ renderers_section ],
+    [ sources_section ],
+    [ sets_section ],
+    [ elements_section ],
+    [ tuples_section ],
+    [ aggregates_section ],
+    actions_section,
+'}';
+
+//Libraries
+
+libraries_section = 'Libraries', '{', {library_import}, '}';
+
+library_import = ID, ";";
+
+handlers_section = 'Handlers', '{', {item_import}, '}';
+
+renderers_section = 'Renderers', '{', {item_import}, '}';
+
+sources_section = 'Sources', '{', {item_import}, '}';
+
+sets_section ='Sets', '{', {item_import}, '}';
+
+item_import = ID, "from", expr, ";";
+
+
+//Elements
+elements_section = 'Elements', '{', {element_declaration}, '}';
+
+element_declaration = ID, assign, data, ";";
+
+//Tuples
+tuples_section = 'Tuples', '{',
+    {tuples_section_declaration},
+'}';
+
+tuples_section_declaration =
+    ID, assign , data,';';
+
+//Aggregates
+aggregates_section =  'Aggregates', '{', {aggr_decl}, '}';
+
+aggr_decl = ID, assign , data ;
+
+//Actions
+actions_section = 'Actions',"{", {action}, "}";
+
+action = block_actions
+	| expr_st
+	| sequence_action
+	| download_action
+	| upload_action
+	| render_action
+	| if_action
+	| cases_action
+	| timeline_action
+	| substitution_action;
+
+block_actions = "{", {action}, "}";
+
+
+sequence_action = 'Sequence','{', {action},'}';
+
+download_action = 'Download', stream_names,
+    'From', source_name,
+    'With', handler_name,
+';';
+
+upload_action = 'Upload', stream_names,
+    'To', source_name,
+    'With', handler_name,
+';';
+
+
+
+render_action = 'Render', stream_names, 'With', expr, ';';
+
+
+
+timeline_action = 'Timeline', timeline_overload, block_actions
+
+
+timeline_overload = timeline_expr
+    | timeline_as
+    | timeline_until
+    | timeline_while
+
+timeline_expr = '(',expr, ':', expr, ':', expr,')';
+timeline_as = 'As', ID ;
+timeline_until = 'UNTIL', expr ;
+timeline_while =  'WHILE', expr ;
+
+ifAction = 'If', condition,
+    'Then', actions_block,
+    [else_action] ;
+else_action = 'Else', actions_block;
+
+cases_action = 'Case', expression, 'Of',a
+    cases_branch, {cases_branch},
+    [else_action] ;
+
+cases_branch = scalar_value, ':', actions_block;
+
+
+substitution_action = ' ', substitution with, 'For', substitution what,'When', condition,';';
+
+expr_st = [expr], ";";  
+block_st = "{", {st}, "}"; 
+select_st = "if", "(", expr, ")", st, ["else", st];
+iter_st = "while", "(", expr, ")", st;
+
+expr = assign;
+assign = log_or, assign_ap;
+assign_ap = "=", log_or, assign_ap | EPS;
+log_or = log_and, log_or_ap;
+log_or_ap = "||", log_and, log_or_ap | EPS;
+log_and = eq, log_and_ap;
+log_and_ap = "&&", eq, log_and_ap | EPS;
+eq = rel, eq_ap;
+
+eq_ap = ("==" | "!="), rel, eq_ap | EPS;
+rel = add, rel_ap;
+rel_ap = ("<" | "<=" | ">" | ">="), add, rel_ap | EPS;
+add = mult, add_ap;
+add_ap = ("+" | "-"), mult, add_ap | EPS;
+mult = unary, mult_ap;
+mult_ap = ("*" | "/" | "%"), unary, mult_ap | EPS;
+
+unary = primary
+  | ("+" | "-" | "!"), primary;
+
+primary = NUMBER
+  | STRING
+  | BOOL
+  | var_or_call
+  | parentheses;
+var_or_call = ID, [fn_call];
+parentheses = "(", expr, ")";
+fn_call = "(", [arg_list], ")";
+
+data = expr 
+   | arr_init;
+
+arr_init = "{", [arg_list], "}";
+arg_list = expr, [",", arg_list];

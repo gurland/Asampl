@@ -27,13 +27,14 @@ PROGRAM PlayAndSaveVideo {
     }
     Actions {
 	
-		if(num < 10){
-			Download videoBundled From videoIn With OGGIn;
+      if(num < 10){
+        Download videoBundled From videoIn With OGGIn;
 
-			Timeline As time  {
-					Render videoBundled With VideoOutput;
-			}
-		}
+        Timeline As time  {
+            Render videoBundled With VideoOutput;
+        }
+      }
+      func(1,2);
     }
 }
 

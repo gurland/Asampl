@@ -1,28 +1,30 @@
 #include "pch.h"
 #include "lexer.h"
 
-#include<string.h>
-#include<ctype.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<stdbool.h>
-
 #include <iostream>
 #include <fstream>
-
 #include <algorithm>
-
+#include <cctype>
 #include <string>
 #include <map>
 
 namespace Lexer {
 
-	struct comp {
-		bool operator() (const std::string &lhs, const std::string &rhs) const {
-			return _stricmp(lhs.c_str(), rhs.c_str()) < 0;
+	struct comp
+	{
+		struct nocase_char_compare
+		{
+			bool operator() (const unsigned char &c1, const unsigned char &c2) const {
+				return tolower (c1) < tolower (c2);
+			}
+		};
+		bool operator() (const std::string &s1, const std::string &s2) const {
+			return std::lexicographical_compare(
+				s1.begin(), s1.end(),
+				s2.begin(), s2.end(),
+				nocase_char_compare());
 		}
 	};
-
 
 	std::map <std::string, TokenType, comp> program_key_words = {
 
@@ -414,7 +416,6 @@ namespace Lexer {
 		return 0;
 	}
 
-	// выделить лексему 'число'
 	inline static int token_digit(std::fstream &fs, Token *token_to_add)
 	{
 		std::string buffer;
@@ -542,13 +543,13 @@ namespace Lexer {
 
 	void token_print(std::vector<Token> &token_sequence)
 	{
-		for (const auto& token : token_sequence) {
-			std::string str = "\t\tValue: ";
+		for (const auto &token : token_sequence) {
+			std::string str = "\t\tType: ";
 			if ((token.get_buffer().length() <= 8)) {
-				str = "\t\t\tValue: ";
+				str = "\t\t\tType: ";
 			}
 			else if ((token.get_buffer().length() > 16)) {
-				str = "\tValue: ";
+				str = "\tType: ";
 			}
 			std::cout <<
 				"Lexem: " << token.get_buffer() <<

@@ -1,0 +1,20 @@
+PROGRAM Test1 {
+    Libraries {
+        pylib;
+    }
+    Elements {
+        s1 = 0;
+        s2 = 0;
+    }
+    Actions {
+        dbg(tuple(1, 2, 3));
+        s1 = 'Hello';
+        s2 = 'World';
+        dbg(s1);
+        dbg(s2);
+        dbg(string_concat(s1, string_concat(', ', s2)));
+        pylib_hello(1);
+        pylib_hello(s1);
+        dbg(pylib_write_image(random_image(50, 50), 'test.png'));
+    }
+}

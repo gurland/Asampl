@@ -13,20 +13,28 @@
 #include "parser.h"
 #include "interpreter.h"
 
-
-
 int main(int argc, char *argv[])
 {
 	if (argc < 2) {
-		std::cerr << "Error, no input file specified";
+		std::cerr << "Error, no input file specified\n";
 		return 0;
 	}
 	const char *file_name = argv[1];
 
+    std::filesystem::path handlers_directory;
+    if (argc >= 3) {
+        handlers_directory = argv[2];
+    }
+
+    std::filesystem::path libraries_directory;
+    if (argc >= 4) {
+        libraries_directory = argv[3];
+    }
+
 	std::fstream file_stream(file_name);
 
 	if (!file_stream) {
-		std::cerr << "Error while trying to open input file";
+		std::cerr << "Error while trying to open input file\n";
 		return 0;
 	}
 
@@ -34,7 +42,7 @@ int main(int argc, char *argv[])
 	int code = Lexer::split_tokens(file_stream, lexem_sequence);
 
 	if (code == -1) {
-		std::cerr << "Error while reading program file stream";
+		std::cerr << "Error while reading program file stream\n";
 		return 0;
 	}
 
@@ -43,22 +51,29 @@ int main(int argc, char *argv[])
 	Parser p(&lexem_sequence);
 	Tree *tree = p.buid_tree();
 	if (!tree) {
-		std::cerr << "Error while parsing sequence of lexemes";
+		std::cerr << "Error while parsing sequence of lexemes\n";
 		return 0;
 	}
 
 	tree->print(std::cout);
 
-	//execute(tree);
+    Asampl::Interpreter::Program program;
+    program.set_handlers_directory(handlers_directory);
+    if (!libraries_directory.empty()) {
+        program.add_libraries_directory(libraries_directory);
+    }
+    program.load_stdlib();
+    program.execute(tree);
 
-	Tree::free(tree);
+	//Tree::free(tree);
 	return 0;
+	
 }
 
 // Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
 // Отладка программы: F5 или меню "Отладка" > "Запустить отладку"
 
-// Советы по началу работы 
+// Советы по началу работы
 //   1. В окне обозревателя решений можно добавлять файлы и управлять ими.
 //   2. В окне Team Explorer можно подключиться к системе управления версиями.
 //   3. В окне "Выходные данные" можно просматривать выходные данные сборки и другие сообщения.
