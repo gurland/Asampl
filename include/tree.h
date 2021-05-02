@@ -1,4 +1,6 @@
-﻿#pragma once
+#ifndef _TREE_H
+#define _TREE_H
+
 #include <vector>
 #include <algorithm>
 
@@ -7,45 +9,79 @@
 #include <string>
 #include <type_traits>
 
-#include "ast.h"
+enum class ast_node_type {
+	UNKNOWN,
 
-class Tree;
-using children_t = std::vector<Tree *>;
+	PROGRAM,
 
-class Tree {
+	PARAM_LIST,
+	ARG_LIST,
+};
+
+using ast_nt = ast_node_type;
+
+class ast_node {
 public:
-
-	Tree()
+	ast_node() :
+		type(ast_nt::UNKNOWN),
+		value((int)0)
 	{}
 
-	Tree(AstNode *value) :
-		node_(value)
+	ast_node(ast_nt _type, std::string _value) :
+		type(_type),
+		value(_value)
+	{}
+
+	ast_node(ast_nt _type) :
+		type(_type),
+		value((int)0)
+	{}
+
+	ast_node(ast_nt _type, int) :
+		type(_type),
+		value((int)0)
+	{}
+
+	ast_nt type;
+    std::variant<int, std::string> value;
+};
+
+class as_tree;
+using ast_children = std::vector<as_tree *>;
+
+class as_tree {
+public:
+
+	as_tree()
+	{}
+
+	as_tree(ast_node *value) :
+		node(value)
 	{}
 
 	void print(std::ostream &file, const std::string &indent = "", bool root = true, int last = 1);
 
-	static void free(Tree *tree) {
+	static void free(as_tree *tree) {
 		if (!tree) return;
-		children_t children = tree->children_;
-		delete tree;
+		ast_children children = tree->children;
 		for (auto child : children) {
-			Tree::free(child);
+			as_tree::free(child);
 		}
 	}
 
-	const AstNode *get_node() const { return node_.get(); }
-	const children_t &get_children() const { return children_; }
+	const ast_node *get_node() const { return node.get(); }
+	const ast_children &get_children() const { return children; }
 
-	void add_child(Tree *child) {
-		children_.emplace_back(child);
+	void add_child(as_tree *child) {
+		children.emplace_back(child);
 	}
-	void add_child(children_t::const_iterator it, Tree *child) {
-		children_.emplace(it, child);
+	void add_child(ast_children::const_iterator it, as_tree *child) {
+		children.emplace(it, child);
 	}
 
-    const Tree* find_child(AstNodeType type) const {
-        for (auto& child : children_) {
-            if (child->get_node()->type_ == type) {
+    const as_tree* find_child(ast_nt type) const {
+        for (auto& child : children) {
+            if (child->get_node()->type == type) {
                 return child;
             }
         }
@@ -59,24 +95,25 @@ public:
     template< typename... Ms >
     bool match_children(Ms&&... child_matchers) const;
 
-private:
-	children_t children_;
-	std::unique_ptr<AstNode> node_;
+	ast_children children;
+	std::unique_ptr<ast_node> node;
 };
 
 #include "matcher.h"
 
 template< typename M, typename... Ms >
-bool Tree::match(M&& node_matcher, Ms&&... child_matchers) const {
-    if (!Matcher::match_one(*node_, std::forward<M>(node_matcher))) {
+bool as_tree::match(M&& node_matcher, Ms&&... child_matchers) const {
+    if (!Matcher::match_one(*node, std::forward<M>(node_matcher))) {
         return false;
     }
-    return Matcher::match_impl(children_, 0, std::forward<Ms>(child_matchers)...);
+    return Matcher::match_impl(children, 0, std::forward<Ms>(child_matchers)...);
 }
 
 template< typename... Ms >
-bool Tree::match_children(Ms&&... child_matchers) const {
-    return Matcher::match_impl(children_, 0, std::forward<Ms>(child_matchers)...);
+bool as_tree::match_children(Ms&&... child_matchers) const {
+    return Matcher::match_impl(children, 0, std::forward<Ms>(child_matchers)...);
 }
 
 #include "matcher_impl.h"
+
+#endif /* _TREE_H */

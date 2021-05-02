@@ -8,20 +8,20 @@
 #include <variant>
 
 enum class token_type {
-    KW_HANDLER,
-    KW_LIBRARY,
-    KW_FROM,
-    KW_IF,
-    KW_WHILE,
-    KW_MATCH,
-    KW_TIMELINE,
-    KW_DOWNLOAD,
-    KW_UPLOAD,
-    KW_TO,
-    KW_FN,
-    KW_LET,
-    KW_TRUE,
-    KW_FALSE,
+    HANDLER,
+    LIBRARY,
+    FROM,
+    IF,
+    WHILE,
+    MATCH,
+    TIMELINE,
+    DOWNLOAD,
+    UPLOAD,
+    TO,
+    FN,
+    LET,
+    TRUE,
+    FALSE,
 
     ID,
     STRING,
@@ -74,6 +74,16 @@ enum class token_type {
     NONE,
 };
 
+enum class token_variant_type {
+    INT = 0,
+    STRING,
+};
+
+using tvt = token_variant_type;
+#define get_tvt(t) ((tvt)((t)->buffer.index()))
+#define get_tstr_val(t) (std::get<std::string>((t)->buffer))
+// #define get_tint_val(token) (std::get<int>((token)->buffer))
+
 class token {
 public:
     token() : type(token_type::NONE) {}
@@ -89,7 +99,7 @@ public:
 };
 
 int split_tokens(std::fstream &fs, std::vector<token> &token_sequence);
-std::string to_string(token_type type);
+std::string tt_to_string(token_type type);
 
 
 #endif /* _LEXER_H */

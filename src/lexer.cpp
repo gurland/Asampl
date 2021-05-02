@@ -36,39 +36,37 @@ enum class lexer_state {
 };
 
 static std::map<std::string, token_type> key_words = {
-    {"handler",  token_type::KW_HANDLER},
-    {"library",  token_type::KW_LIBRARY},
-    {"from",     token_type::KW_FROM},
-    {"if",       token_type::KW_IF},
-    {"while",    token_type::KW_WHILE},
-    {"match",    token_type::KW_MATCH},
-    {"timeline", token_type::KW_TIMELINE},
-    {"download", token_type::KW_DOWNLOAD},
-    {"updload",  token_type::KW_UPLOAD},
-    {"to",       token_type::KW_TO},
-    {"fn",       token_type::KW_FN},
-    {"let",      token_type::KW_LET},
-    {"true",     token_type::KW_TRUE},
-    {"false",    token_type::KW_FALSE},
+    {"handler",  token_type::HANDLER},
+    {"library",  token_type::LIBRARY},
+    {"from",     token_type::FROM},
+    {"if",       token_type::IF},
+    {"while",    token_type::WHILE},
+    {"match",    token_type::MATCH},
+    {"timeline", token_type::TIMELINE},
+    {"download", token_type::DOWNLOAD},
+    {"updload",  token_type::UPLOAD},
+    {"to",       token_type::TO},
+    {"fn",       token_type::FN},
+    {"let",      token_type::LET},
+    {"true",     token_type::TRUE},
+    {"false",    token_type::FALSE},
 };
 
 static std::vector<token_type> delay_types = {
-    token_type::KW_HANDLER,
-    token_type::KW_LIBRARY,
-    token_type::KW_FROM,
-    token_type::KW_IF,
-    token_type::KW_WHILE,
-    token_type::KW_MATCH,
-    token_type::KW_TIMELINE,
-    token_type::KW_DOWNLOAD,
-    token_type::KW_UPLOAD,
-    token_type::KW_TO,
-    token_type::KW_FN,
-    token_type::KW_LET,
-
+    token_type::HANDLER,
+    token_type::LIBRARY,
+    token_type::FROM,
+    token_type::IF,
+    token_type::WHILE,
+    token_type::MATCH,
+    token_type::TIMELINE,
+    token_type::DOWNLOAD,
+    token_type::UPLOAD,
+    token_type::TO,
+    token_type::FN,
+    token_type::LET,
     token_type::ID,
     token_type::NUMBER,
-
     token_type::DIV,
     token_type::PLUS,
     token_type::MINUS,
@@ -81,7 +79,6 @@ static std::vector<token_type> delay_types = {
     token_type::BIN_NOR,
     token_type::INCREM,
     token_type::DECREM,
-
     token_type::LEFT_SHIFT,
     token_type::RIGHT_SHIFT,
 };
@@ -92,29 +89,29 @@ static std::vector<lexer_state> wrt_states = {
 	lexer_state::NUM_OR_WORD,
 };
 
-using str_cit = std::string::const_iterator;
+#define cit const_iterator
 
-static int line = 0;
+static int line = 1;
 static lexer_state state = lexer_state::NONE;
 
-static inline char get_next_char(str_cit &it) {
+static inline char get_next_char(std::string::cit &it) {
     return *(++it);
 }
 
-static void get_to_next_line(str_cit &it) {
+static void get_to_next_line(std::string::cit &it) {
     ++line;
     while(get_next_char(it) != '\n') {}
     get_next_char(it);
 }
 
-static void get_to_next_nospace(str_cit &it) {
+static void get_to_next_nospace(std::string::cit &it) {
     char c = 0;
     while(c = get_next_char(it), isspace(c) || c == '\n')
         if (c == '\n')
             ++line;
 }
 
-static void get_to_next(str_cit &it) {
+static void get_to_next(std::string::cit &it) {
     ++it;
 }
 
@@ -139,7 +136,7 @@ static bool store_buf(token_type ttype) {
     }
 }
 
-static void file_promotion(str_cit &it) {
+static void file_promotion(std::string::cit &it) {
     switch(state) {
         case lexer_state::STRING:
         case lexer_state::WORD:
@@ -204,9 +201,9 @@ static token_type state_string_handle(const std::string &buf, char c) {
 
 static token_type state_word_handle(const std::string &buf, char c) {
     token_type ttype = token_type::NONE;
-    auto kw_it = key_words.find(buf);
-    if (kw_it != key_words.end()) {
-        ttype = kw_it->second;
+    auto it = key_words.find(buf);
+    if (it != key_words.end()) {
+        ttype = it->second;
     } else if (!is_name_part(c)) {
         ttype = token_type::ID;
     }
@@ -226,7 +223,7 @@ static token_type state_num_or_word_handle(const std::string &buf, char c) {
     return ttype;
 }
 
-static token_type state_div_operator_handler(str_cit &it) {
+static token_type state_div_operator_handler(std::string::cit &it) {
     token_type ttype = token_type::NONE;
     switch(*it) {
         case '/':
@@ -358,7 +355,7 @@ static token_type state_bin_nor_operator_handler(char c) {
 int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
     std::string file_contents = std::string(std::istreambuf_iterator<char>(file),
                                             std::istreambuf_iterator<char>());
-    str_cit it = file_contents.cbegin();
+    std::string::cit it = file_contents.cbegin();
     std::string buf = "";
     token_type ttype = token_type::NONE;
     bool get_next = true;
@@ -409,27 +406,27 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
             file_promotion(it);
         }
     }
-    return 0;
+    return (state == lexer_state::NONE) ? 0 : -1;
 }
 
 
-std::string to_string(token_type type) {
+std::string tt_to_string(token_type type) {
     std::string buf = "";
     switch(type) {
-        _SIMPLE_CASE(token_type::KW_HANDLER, buf, "KW_HANDLER")
-        _SIMPLE_CASE(token_type::KW_LIBRARY, buf, "KW_LIBRARY")
-        _SIMPLE_CASE(token_type::KW_FROM, buf, "KW_FROM")
-        _SIMPLE_CASE(token_type::KW_IF, buf, "KW_IF")
-        _SIMPLE_CASE(token_type::KW_WHILE, buf, "KW_WHILE")
-        _SIMPLE_CASE(token_type::KW_MATCH, buf, "KW_MATCH")
-        _SIMPLE_CASE(token_type::KW_TIMELINE, buf, "KW_TIMELINE")
-        _SIMPLE_CASE(token_type::KW_DOWNLOAD, buf, "KW_DOWNLOAD")
-        _SIMPLE_CASE(token_type::KW_UPLOAD, buf, "KW_UPLOAD")
-        _SIMPLE_CASE(token_type::KW_TO, buf, "KW_TO")
-        _SIMPLE_CASE(token_type::KW_FN, buf, "KW_FN")
-        _SIMPLE_CASE(token_type::KW_LET, buf, "KW_LET")
-        _SIMPLE_CASE(token_type::KW_TRUE, buf, "KW_TRUE")
-        _SIMPLE_CASE(token_type::KW_FALSE, buf, "KW_FALSE")
+        _SIMPLE_CASE(token_type::HANDLER, buf, "HANDLER")
+        _SIMPLE_CASE(token_type::LIBRARY, buf, "LIBRARY")
+        _SIMPLE_CASE(token_type::FROM, buf, "FROM")
+        _SIMPLE_CASE(token_type::IF, buf, "IF")
+        _SIMPLE_CASE(token_type::WHILE, buf, "WHILE")
+        _SIMPLE_CASE(token_type::MATCH, buf, "MATCH")
+        _SIMPLE_CASE(token_type::TIMELINE, buf, "TIMELINE")
+        _SIMPLE_CASE(token_type::DOWNLOAD, buf, "DOWNLOAD")
+        _SIMPLE_CASE(token_type::UPLOAD, buf, "UPLOAD")
+        _SIMPLE_CASE(token_type::TO, buf, "TO")
+        _SIMPLE_CASE(token_type::FN, buf, "FN")
+        _SIMPLE_CASE(token_type::LET, buf, "LET")
+        _SIMPLE_CASE(token_type::TRUE, buf, "TRUE")
+        _SIMPLE_CASE(token_type::FALSE, buf, "FALSE")
 
         _SIMPLE_CASE(token_type::ID, buf, "ID")
         _SIMPLE_CASE(token_type::STRING, buf, "STRING")

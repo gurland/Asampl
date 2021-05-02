@@ -11,7 +11,7 @@ var_decl_without_init = "let", id, ";";
 var_decl_with_init = "let", id, "=", data, ";";
 data = expr
    | arr_init;
-arr_init = "{", [arg_list], "}";
+arr_init = "[", [arg_list], "]";
 arg_list = expr, [",", arg_list];
 
 func_decl = "fn", id, "(", [param_list], ")", block_st;

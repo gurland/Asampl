@@ -14,7 +14,7 @@ target_include_directories(asampl-interface INTERFACE include)
 add_subdirectory(src)
 
 # executable
-add_executable(asampl Asampl.cpp)
+add_executable(asampl main.cpp)
 
 target_link_libraries(asampl asampl-lib asampl-ffi)
 

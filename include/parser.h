@@ -1,41 +1,41 @@
-#pragma once
-
+#ifndef _PARSER_H
+#define _PARSER_H
 #include <vector>
 
 #include "lexer.h"
 #include "tree.h"
 
-//using namespace Lexer;
+// using token_cit = std::vector<token>::const_iterator;
 
-using token_iterator_t = std::vector<Lexer::Token>::iterator;
+// class parser {
+// public:
+// 	parser(std::vector<token> *token_sequence) :
+// 		token_sequence(token_sequence),
+// 		it(token_sequence->begin()),
+// 		level(-1)
+// 	{}
 
-class Parser {
-public:
-	Parser(std::vector<Lexer::Token> *token_sequence) :
-		token_sequence_(token_sequence),
-		iterator_(token_sequence->begin()),
-		level_(-1)
-	{}
+// 	const void set_error(const std::string &err) { error = err; }
+// 	const std::string &get_error() { return error; }
 
-	const void set_error(const std::string &err) { error_ = err; }
-	const std::string &get_error() { return error_; }
+// 	void increase_level() { ++level; }
+// 	void reduce_level() { --level; }
 
-	void increase_level() { ++level_; }
-	void reduce_level() { --level_; }
+// 	token get_it_value() { return *it; }
+// 	const token_it &get_it() { return it; }
 
-	Lexer::Token get_iterator_value() { return *iterator_; }
-	const token_iterator_t &get_iterator() { return iterator_; }
+// 	void inc_it() { ++it; };
 
-	void increase_iterator() { ++iterator_; };
-
-	const std::vector<Lexer::Token> *const get_token_sequence() { return token_sequence_; };
+// 	const std::vector<token> *const get_token_sequence() { return token_sequence; };
 	
-	Tree *buid_tree();
-private:
-	std::vector<Lexer::Token> *token_sequence_;
-	token_iterator_t iterator_;
-	std::string error_;
-	int level_;
-};
+// 	as_tree *buid_tree();
+// private:
+// 	std::vector<token> *token_sequence;
+// 	token_cit it;
+// 	// std::string error;
+// 	int level;
+// };
 
-
+as_tree *buid_tree(std::vector<token> &token_sequence);
+void release_tree(as_tree *tree);
+#endif /* _PARSER_H */

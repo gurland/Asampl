@@ -1,19 +1,20 @@
-#pragma once
+#ifndef _MATCHER_H
+#define _MATCHER_H
 
 #include "tree.h"
 
 namespace Matcher {
 
 template< typename M >
-bool match_one(const AstNode& node, M&& matcher);
+bool match_one(const ast_node& node, M&& matcher);
 
 template< typename M >
-bool match_one(const Tree& tree, M&& matcher);
+bool match_one(const as_tree& tree, M&& matcher);
 
 template< typename M, typename... Ms >
-bool match_impl(const children_t& children, size_t n, M&& matcher, Ms&&... rest);
+bool match_impl(const ast_children& children, size_t n, M&& matcher, Ms&&... rest);
 
-bool match_impl(const children_t& children, size_t n);
+bool match_impl(const ast_children& children, size_t n);
 
 template< typename M, typename Ms >
 struct WithChildren {
@@ -24,7 +25,7 @@ struct WithChildren {
         : matcher(std::forward<M>(matcher))
         , child_matchers(std::forward<Ms>(child_matchers)) {}
 
-    bool operator()(const Tree& tree) {
+    bool operator()(const as_tree& tree) {
         if (!match_one(tree, matcher)) {
             return false;
         }
@@ -50,3 +51,4 @@ auto with_children(M&& matcher, Ms&&... child_matchers) {
 }
 
 }
+#endif /* _MATCHER_H */
