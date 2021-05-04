@@ -40,8 +40,10 @@ static std::map<std::string, token_type> key_words = {
     {"library",  token_type::LIBRARY},
     {"from",     token_type::FROM},
     {"if",       token_type::IF},
+    {"else",     token_type::ELSE},
     {"while",    token_type::WHILE},
     {"match",    token_type::MATCH},
+    {"def",      token_type::DEF_CASE},
     {"timeline", token_type::TIMELINE},
     {"download", token_type::DOWNLOAD},
     {"updload",  token_type::UPLOAD},
@@ -50,6 +52,10 @@ static std::map<std::string, token_type> key_words = {
     {"let",      token_type::LET},
     {"true",     token_type::TRUE},
     {"false",    token_type::FALSE},
+    {"with",     token_type::WITH},
+    {"continue", token_type::CONTINUE},
+    {"break",    token_type::BREAK},
+    {"return",   token_type::RETURN},
 };
 
 static std::vector<token_type> delay_types = {
@@ -81,6 +87,14 @@ static std::vector<token_type> delay_types = {
     token_type::DECREM,
     token_type::LEFT_SHIFT,
     token_type::RIGHT_SHIFT,
+    token_type::ELSE,
+    token_type::DEF_CASE,
+    token_type::TRUE,
+    token_type::FALSE,
+    token_type::WITH,
+    token_type::CONTINUE,
+    token_type::BREAK,
+    token_type::RETURN,
 };
 
 static std::vector<lexer_state> wrt_states = {
@@ -93,6 +107,8 @@ static std::vector<lexer_state> wrt_states = {
 
 static int line = 1;
 static lexer_state state = lexer_state::NONE;
+
+static bool point_in_num = false;
 
 static inline char get_next_char(std::string::cit &it) {
     return *(++it);
@@ -213,7 +229,9 @@ static token_type state_word_handle(const std::string &buf, char c) {
 static token_type state_num_or_word_handle(const std::string &buf, char c) {
     token_type ttype = token_type::NONE;
     if (!isdigit(c)) {
-        if (is_name_part(c)) {
+        if (!point_in_num && c == '.') {
+            point_in_num = true;
+        } else if (is_name_part(c)) {
             state = lexer_state::WORD;
             ttype = state_word_handle(buf, c);
         } else {
@@ -389,6 +407,9 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
             } else {
                 token_sequence.emplace_back((int)0, ttype, line);
             }
+            if (ttype == token_type::NUMBER) {
+                point_in_num = false;
+            }
             // token_sequence.emplace_back((store_buf(ttype)) ? buf : (int)0, ttype, line);
             state = lexer_state::NONE;
             buf.clear();
@@ -417,8 +438,10 @@ std::string tt_to_string(token_type type) {
         _SIMPLE_CASE(token_type::LIBRARY, buf, "LIBRARY")
         _SIMPLE_CASE(token_type::FROM, buf, "FROM")
         _SIMPLE_CASE(token_type::IF, buf, "IF")
+        _SIMPLE_CASE(token_type::ELSE, buf, "ELSE")
         _SIMPLE_CASE(token_type::WHILE, buf, "WHILE")
         _SIMPLE_CASE(token_type::MATCH, buf, "MATCH")
+        _SIMPLE_CASE(token_type::DEF_CASE, buf, "DEF_CASE")
         _SIMPLE_CASE(token_type::TIMELINE, buf, "TIMELINE")
         _SIMPLE_CASE(token_type::DOWNLOAD, buf, "DOWNLOAD")
         _SIMPLE_CASE(token_type::UPLOAD, buf, "UPLOAD")
@@ -427,6 +450,10 @@ std::string tt_to_string(token_type type) {
         _SIMPLE_CASE(token_type::LET, buf, "LET")
         _SIMPLE_CASE(token_type::TRUE, buf, "TRUE")
         _SIMPLE_CASE(token_type::FALSE, buf, "FALSE")
+        _SIMPLE_CASE(token_type::WITH, buf, "WITH")
+        _SIMPLE_CASE(token_type::CONTINUE, buf, "CONTINUE")
+        _SIMPLE_CASE(token_type::BREAK, buf, "BREAK")
+        _SIMPLE_CASE(token_type::RETURN, buf, "RETURN")
 
         _SIMPLE_CASE(token_type::ID, buf, "ID")
         _SIMPLE_CASE(token_type::STRING, buf, "STRING")

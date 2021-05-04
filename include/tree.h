@@ -16,6 +16,25 @@ enum class ast_node_type {
 
 	PARAM_LIST,
 	ARG_LIST,
+
+	BLOCK,
+	IF,
+	WHILE,
+	MATCH,
+	CASE,
+	DEF_CASE,
+	MATCH_LIST,
+
+	TIMELINE,
+	DOWNLOAD,
+	UPLOAD,
+
+	CONTINUE,
+	BREAK,
+	RETURN,
+
+	OBJ_DECL,
+	OBJ_FIELD,
 };
 
 using ast_nt = ast_node_type;

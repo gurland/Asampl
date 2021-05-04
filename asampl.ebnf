@@ -4,9 +4,9 @@ handler_decl = "handler", id, "from", file_name;
 
 library_decl = "library", id, "from", file_name;
 
-var_or_func_decl = var_decl | func_decl;
+var_or_func_decl = var_decl_st | func_decl;
 
-var_decl = var_dev_without_init | var_dev_with_init;
+var_decl_st = var_dev_without_init | var_dev_with_init;
 var_decl_without_init = "let", id, ";";
 var_decl_with_init = "let", id, "=", data, ";";
 data = expr
@@ -21,6 +21,7 @@ block_st = "{", {st}, "}";
 
 st = expr_st
    | block_st
+   | var_decl_st
    | select_st
    | iter_st
    | match_st
@@ -30,28 +31,32 @@ st = expr_st
    | jump_st;
 
 expr_st = [expr], ";";
-block_st = "{", {var_decl}, {st}, "}";
+block_st = "{", {st}, "}";
 select_st = "if", "(", expr, ")", st, ["else", st];
 iter_st = "while", "(", expr, ")", st;
 
-match_st = "match", expr, "{", [case_list], [def_case], "}";
-case_list = match_list, "->", st, [case_list];
+match_st = "match", "(", expr, ")", "{", {case}, [def_case], "}";
+case = match_list, "->", st;
 match_list = expr, ["|", match_list];
 def_case = "def", "->", st;
 
 timeline_st = "timeline", obj, func;
 
-obj = expr | obj_decl;
+obj = id | obj_decl;
 obj_decl = "{", [fld_list], "}";
-fld_list = expr, ":", expr, [',', fld_list];
+fld_list = field, [',', fld_list];
+field = expr, ":", expr;
 
-func = expr | lambda;
+func = id | lambda;
 lambda = "|", [param_list], "|", block_st;
 
 download_st = "download", expr, "from", expr, "with", expr;
 updload_st = "upload", expr, "to", expr, "with", expr;
 
-jump_st = ("continue" | "break" | "return", [expr]), ";";
+jump_st = ("continue" | "break" | return), ";";
+continue = "continue";
+break = "break";
+return = "return", [expr];
 
 expr = assign;
 
