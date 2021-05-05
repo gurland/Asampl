@@ -29,6 +29,9 @@ enum class token_type {
     BREAK,
     RETURN,
 
+    NOT,
+    BIN_NOT,
+
     ID,
     STRING,
     NUMBER,
@@ -43,8 +46,10 @@ enum class token_type {
     COLON,
     LEFT_BRACKET,
     RIGHT_BRACKET,
-    PIPE,
     EQUAL,
+    NOT_EQUAL,
+    LESS_EQUAL,
+    MORE_EQUAL,
 
     DIV_ASSIGNMENT,
     PLUS_ASSIGNMENT,
@@ -66,7 +71,10 @@ enum class token_type {
     MORE,
     BIN_AND,
     BIN_OR,
+    PIPE = BIN_OR,
     BIN_NOR,
+    LOG_AND,
+    LOG_OR,
     INCREM,
     DECREM,
 
@@ -76,6 +84,7 @@ enum class token_type {
 
     LEFT_SHIFT,
     RIGHT_SHIFT,
+    QUESTION_MARK,
 
     NONE,
 };

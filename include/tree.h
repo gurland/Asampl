@@ -35,6 +35,8 @@ enum class ast_node_type {
 
 	OBJ_DECL,
 	OBJ_FIELD,
+
+	LAMBDA,
 };
 
 using ast_nt = ast_node_type;

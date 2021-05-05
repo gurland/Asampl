@@ -41,6 +41,8 @@ using grammar_rule = std::function<as_tree *(parser *)>;
     pnode->add_child(__node);               \
 } while(0)
 
+as_tree *take_token_of(parser *p, const std::vector<token_type> &types);
+
 #define take_rule(p, pnode, rule, err_msg) do { \
     grammar_rule __rule = (rule);               \
     as_tree *__node = __rule((p));              \
@@ -76,8 +78,13 @@ public:
 
 static ast_nt ttype_to_atype(token_type type);
 
-static bool ebnf_multiple(parser *p, ast_children *nodes, grammar_rule rule);
-static as_tree * ebnf_select(parser *p, std::vector<grammar_rule> rules);
+static as_tree *accept(parser *p, token_type ttype);
+static bool bool_accept(parser *p, token_type ttype);
+static as_tree *expect(parser *p, token_type ttype);
+static bool bool_expect(parser *p, token_type ttype);
+
+static bool ebnf_multiple(parser *p, as_tree *parent_node, grammar_rule rule);
+static as_tree *ebnf_select(parser *p, const std::vector<grammar_rule> &rules);
 
 static as_tree *prog(parser *p);
 static as_tree *handler_decl(parser *p);
@@ -112,10 +119,57 @@ static as_tree *obj_decl(parser *p);
 static as_tree *field(parser *p);
 
 static as_tree *func(parser *p);
+static as_tree *lambda(parser *p);
 
 static as_tree *continue_handler(parser *p);
 static as_tree *break_handler(parser *p);
 static as_tree *return_handler(parser *p);
+
+static as_tree *assign(parser *p);
+static as_tree *assign_ap(parser *p);
+static as_tree *ternary(parser *p);
+static as_tree *log_or(parser *p);
+static as_tree *log_or_ap(parser *p);
+static as_tree *log_and(parser *p);
+static as_tree *log_and_ap(parser *p);
+static as_tree *incl_or(parser *p);
+static as_tree *incl_or_ap(parser *p);
+static as_tree *excl_or(parser *p);
+static as_tree *excl_or_ap(parser *p);
+static as_tree *band(parser *p);
+static as_tree *band_ap(parser *p);
+static as_tree *eq(parser *p);
+static as_tree *eq_ap(parser *p);
+static as_tree *rel(parser *p);
+static as_tree *rel_ap(parser *p);
+static as_tree *shift(parser *p);
+static as_tree *shift_ap(parser *p);
+static as_tree *add(parser *p);
+static as_tree *add_ap(parser *p);
+static as_tree *mult(parser *p);
+static as_tree *mult_ap(parser *p);
+static as_tree *unary(parser *p);
+static as_tree *postfix(parser *p);
+static as_tree *postfix_ap(parser *p);
+static as_tree *primary(parser *p);
+static as_tree *id(parser *p);
+static as_tree *number(parser *p);
+static as_tree *string(parser *p);
+static as_tree *boolean(parser *p);
+static as_tree *var_or_call(parser *p);
+static as_tree *parentheses(parser *p);
+static as_tree *fn_call(parser *p);
+
+as_tree *take_token_of(parser *p, const std::vector<token_type> &types) {
+    as_tree *node = nullptr;
+    for(auto type : types) {
+        node = accept(p, type);
+        if (node) {
+            return node;
+        }
+    }
+    return nullptr;
+}
 
 as_tree *buid_tree(std::vector<token> &token_sequence) {
     try {
@@ -140,9 +194,9 @@ void release_tree(as_tree *tree) {
 
 static as_tree *prog(parser *p) {
     as_tree *prog_node = new as_tree(new ast_node(ast_nt::PROGRAM));
-    ebnf_multiple(p, &prog_node->children, handler_decl);
-    ebnf_multiple(p, &prog_node->children, library_decl);
-    ebnf_multiple(p, &prog_node->children, var_or_func_decl);
+    ebnf_multiple(p, prog_node, handler_decl);
+    ebnf_multiple(p, prog_node, library_decl);
+    ebnf_multiple(p, prog_node, var_or_func_decl);
     return prog_node;
 }
 
@@ -198,23 +252,57 @@ static as_tree *expect(parser *p, token_type ttype) {
 	// return nullptr;
 }
 
-static bool ebnf_multiple(parser *p, ast_children *children, grammar_rule rule) {
+static bool ebnf_multiple(parser *p, as_tree *parent_node, grammar_rule rule) {
     as_tree *node = nullptr;
     while(node = rule(p), node) {
-        children->push_back(node);
+        parent_node->add_child(node);
     }
     return true;
 }
 
-static as_tree * ebnf_select(parser *p, std::vector<grammar_rule> rules) {
+static as_tree *ebnf_select(parser *p, const std::vector<grammar_rule> &rules) {
     as_tree *node = nullptr;
-    for (grammar_rule &rule : rules) {
+    for (auto rule : rules) {
         node = rule(p);
         if (node) {
             return node;
         }
     }
     return nullptr;
+}
+
+static as_tree *ebnf_ap_main_rule(parser *p, grammar_rule next, grammar_rule ap) {
+	as_tree *next_node = next(p);
+	if (next_node) {
+		as_tree *ap_node = ap(p);
+		if (ap_node) {
+			ap_node->add_child(next_node);
+			return ap_node;
+		}
+		return next_node;
+	}
+	return nullptr;
+}
+
+static as_tree *ebnf_ap_recursive_rule(parser *p, const std::vector<token_type> &types, grammar_rule next, grammar_rule ap) {
+	as_tree *op_node = take_token_of(p, types);
+	if (op_node == nullptr) {
+        return nullptr;
+    }
+
+	as_tree *node = nullptr;
+	as_tree *next_node = next(p);
+	as_tree *ap_node = ap(p);
+	if (ap_node) {
+		ap_node->add_child(next_node);
+		node = ap_node;
+	}
+	else {
+		node = next_node;
+	}
+
+	op_node->add_child(node);
+	return op_node;
 }
 
 static inline as_tree *__hl_decl(parser *p, token_type ttype) {
@@ -362,7 +450,7 @@ static as_tree *block_st(parser *p) {
         return nullptr;
     }
     as_tree *main_node = new as_tree(new ast_node(ast_nt::BLOCK));
-    ebnf_multiple(p, &main_node->children, st);
+    ebnf_multiple(p, main_node, st);
     bool_expect(p, token_type::RIGHT_BRACE);
     return main_node;
 }
@@ -406,7 +494,7 @@ static as_tree *match_st(parser *p) {
     take_rule(p, main_node, expr, "expr");
     bool_expect(p, token_type::RIGHT_BRACKET);
     bool_expect(p, token_type::LEFT_BRACE);
-    ebnf_multiple(p, &main_node->children, case_handler);
+    ebnf_multiple(p, main_node, case_handler);
     try_to_take_rule(p, main_node, def_case);
     return main_node;
 }
@@ -554,12 +642,251 @@ static as_tree *field(parser *p) {
 }
 
 static as_tree *func(parser *p) {
-    return nullptr;
+    as_tree *node = accept(p, token_type::ID);
+    if (!node) {
+        node = lambda(p);
+    }
+    return node;
+}
+
+static as_tree *lambda(parser *p) {
+    if (!bool_accept(p, token_type::PIPE)) {
+        return nullptr;
+    }
+    as_tree *main_node = new as_tree(new ast_node(ast_nt::LAMBDA));
+    try_to_take_rule(p, main_node, param_list);
+    bool_expect(p, token_type::PIPE);
+    take_rule(p, main_node, block_st, "block");
+    return main_node;
 }
 
 static as_tree *expr(parser *p) {
-    return nullptr;
+    return assign(p);
 }
+
+static as_tree *assign(parser *p) {
+    return ebnf_ap_main_rule(p, ternary, assign_ap);
+}
+
+static as_tree *assign_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::DIV_ASSIGNMENT,
+        token_type::PLUS_ASSIGNMENT,
+        token_type::MINUS_ASSIGNMENT,
+        token_type::MULT_ASSIGNMENT,
+        token_type::MDIV_ASSIGNMENT,
+        token_type::LEFT_SHIFT_ASSIGNMENT,
+        token_type::RIGHT_SHIFT_ASSIGNMENT,
+        token_type::BIN_AND_ASSIGNMENT,
+        token_type::BIN_OR_ASSIGNMENT,
+        token_type::BIN_NOR_ASSIGNMENT,
+    }, ternary, assign_ap);
+}
+
+static as_tree *ternary(parser *p) {
+	as_tree *lor_node = log_or(p);
+    as_tree *qmark = accept(p, token_type::QUESTION_MARK);
+    if (!qmark) {
+        return lor_node;
+    }
+
+    qmark->add_child(lor_node);
+    take_rule(p, qmark, expr, "expr");
+    bool_expect(p, token_type::COLON);
+    take_rule(p, qmark, expr, "expr");
+	return qmark;
+}
+
+static as_tree *log_or(parser *p) {
+    return ebnf_ap_main_rule(p, log_and, log_or_ap);
+}
+
+static as_tree *log_or_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::LOG_OR
+    }, log_and, log_or_ap);
+}
+
+static as_tree *log_and(parser *p) {
+    return ebnf_ap_main_rule(p, incl_or, log_and_ap);
+}
+
+static as_tree *log_and_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::LOG_AND
+    }, incl_or, log_and_ap);
+}
+
+static as_tree *incl_or(parser *p) {
+    return ebnf_ap_main_rule(p, excl_or, incl_or_ap);
+}
+
+static as_tree *incl_or_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::BIN_OR
+    }, excl_or, incl_or_ap);
+}
+
+static as_tree *excl_or(parser *p) {
+    return ebnf_ap_main_rule(p, band, excl_or_ap);
+}
+
+static as_tree *excl_or_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::BIN_NOR
+    }, band, excl_or_ap);
+}
+
+static as_tree *band(parser *p) {
+    return ebnf_ap_main_rule(p, eq, band_ap);
+}
+
+static as_tree *band_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::BIN_AND
+    }, eq, band_ap);
+}
+
+static as_tree *eq(parser *p) {
+    return ebnf_ap_main_rule(p, rel, eq_ap);
+}
+
+static as_tree *eq_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::EQUAL,
+        token_type::NOT_EQUAL
+    }, rel, eq_ap);
+}
+
+static as_tree *rel(parser *p) {
+    return ebnf_ap_main_rule(p, shift, rel_ap);
+}
+
+static as_tree *rel_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::LESS,
+        token_type::MORE,
+        token_type::LESS_EQUAL,
+        token_type::MORE_EQUAL,
+    }, shift, rel_ap);
+}
+
+static as_tree *shift(parser *p) {
+    return ebnf_ap_main_rule(p, add, shift_ap);
+}
+
+static as_tree *shift_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::LEFT_SHIFT,
+        token_type::RIGHT_SHIFT,
+    }, add, shift_ap);
+}
+
+static as_tree *add(parser *p) {
+    return ebnf_ap_main_rule(p, mult, add_ap);
+}
+
+static as_tree *add_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::PLUS,
+        token_type::MINUS,
+    }, mult, add_ap);
+}
+
+static as_tree *mult(parser *p) {
+    return ebnf_ap_main_rule(p, unary, mult_ap);
+}
+
+static as_tree *mult_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::MULT,
+        token_type::DIV,
+        token_type::MDIV,
+    }, unary, mult_ap);
+}
+
+static as_tree *unary(parser *p) {
+	as_tree *op_node = take_token_of(p, {
+        token_type::PLUS,
+        token_type::MINUS,
+        token_type::NOT,
+        token_type::BIN_NOT,
+        token_type::INCREM,
+        token_type::DECREM,
+    });
+	as_tree *post_node = postfix(p);
+
+	if (op_node) {
+		op_node->add_child(post_node);
+		return op_node;
+	}
+	return post_node;
+}
+
+static as_tree *postfix(parser *p) {
+    return ebnf_ap_main_rule(p, primary, postfix_ap);
+}
+
+static as_tree *postfix_ap(parser *p) {
+    return ebnf_ap_recursive_rule(p, {
+        token_type::INCREM,
+        token_type::DECREM,
+    }, primary, postfix_ap);
+}
+
+static as_tree *primary(parser *p) {
+    return ebnf_select(p, {
+        number,
+        string,
+        boolean,
+        parentheses,
+        var_or_call
+    });
+}
+
+static as_tree *id(parser *p) {
+    return accept(p, token_type::ID);
+}
+
+static as_tree *number(parser *p) {
+    return accept(p, token_type::NUMBER);
+}
+
+static as_tree *string(parser *p) {
+    return accept(p, token_type::STRING);
+}
+
+static as_tree *boolean(parser *p) {
+    return nullptr; //tbd
+}
+
+static as_tree *var_or_call(parser *p) {
+    as_tree *main_node = id(p);
+    as_tree *node = fn_call(p);
+    if (node) {
+        main_node->add_child(node);
+    }
+    return main_node;
+}
+
+static as_tree *parentheses(parser *p) {
+    if (!bool_accept(p, token_type::LEFT_BRACKET)) {
+        return nullptr;
+    }
+    as_tree *node = expr(p);
+    bool_expect(p, token_type::RIGHT_BRACKET);
+    return node;
+}
+
+static as_tree *fn_call(parser *p) {
+    if (!bool_accept(p, token_type::LEFT_BRACKET)) {
+        return nullptr;
+    }
+    as_tree *node = arg_list(p);
+    bool_expect(p, token_type::RIGHT_BRACKET);
+    return node;
+}
+
 
 
 

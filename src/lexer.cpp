@@ -29,6 +29,7 @@ enum class lexer_state {
     BIN_AND_OPERATOR,
     BIN_OR_OPERATOR,
     BIN_NOR_OPERATOR,
+    NOT_OPERATOR,
     // END_OPERATOR,
 
     LEFT_SHIFT,
@@ -183,6 +184,8 @@ static token_type state_none_handle(const std::string &buf, char c) {
         _SIMPLE_CASE('(', ttype, token_type::LEFT_BRACKET)
         _SIMPLE_CASE(')', ttype, token_type::RIGHT_BRACKET)
         _SIMPLE_CASE('=', ttype, token_type::EQUAL)
+        _SIMPLE_CASE('~', ttype, token_type::BIN_NOT)
+        _SIMPLE_CASE('?', ttype, token_type::QUESTION_MARK)
         _SIMPLE_CASE('\"', state, lexer_state::STRING)
         _SIMPLE_CASE('/', state, lexer_state::DIV_OPERATOR)
         _SIMPLE_CASE('+', state, lexer_state::PLUS_OPERATOR)
@@ -194,6 +197,7 @@ static token_type state_none_handle(const std::string &buf, char c) {
         _SIMPLE_CASE('&', state, lexer_state::BIN_AND_OPERATOR)
         _SIMPLE_CASE('|', state, lexer_state::BIN_OR_OPERATOR)
         _SIMPLE_CASE('^', state, lexer_state::BIN_NOR_OPERATOR)
+        _SIMPLE_CASE('!', state, lexer_state::NOT_OPERATOR)
         default: {
             if (isdigit(c)) {
                 state = lexer_state::NUM_OR_WORD;
@@ -301,7 +305,7 @@ static token_type state_mdiv_operator_handler(char c) {
 static token_type state_less_operator_handler(char c) {
     token_type ttype = token_type::NONE;
     switch(c) {
-        _SIMPLE_CASE('=', ttype, token_type::LEFT_SHIFT)
+        _SIMPLE_CASE('=', ttype, token_type::LESS_EQUAL)
         default:
             ttype = token_type::LESS;
     }
@@ -321,7 +325,7 @@ static token_type state_left_shift_handler(char c) {
 static token_type state_more_operator_handler(char c) {
     token_type ttype = token_type::NONE;
     switch(c) {
-        _SIMPLE_CASE('>', state, lexer_state::RIGHT_SHIFT)
+        _SIMPLE_CASE('=', ttype, token_type::MORE_EQUAL)
         default:
             ttype = token_type::MORE;
     }
@@ -342,6 +346,7 @@ static token_type state_bin_and_operator_handler(char c) {
     token_type ttype = token_type::NONE;
     switch(c) {
         _SIMPLE_CASE('=', ttype, token_type::BIN_AND_ASSIGNMENT)
+        _SIMPLE_CASE('&', ttype, token_type::LOG_AND)
         default:
             ttype = token_type::BIN_AND;
     }
@@ -352,6 +357,7 @@ static token_type state_bin_or_operator_handler(char c) {
     token_type ttype = token_type::NONE;
     switch(c) {
         _SIMPLE_CASE('=', ttype, token_type::BIN_OR_ASSIGNMENT)
+        _SIMPLE_CASE('|', ttype, token_type::LOG_OR)
         default:
             ttype = token_type::BIN_OR;
     }
@@ -368,7 +374,15 @@ static token_type state_bin_nor_operator_handler(char c) {
     return ttype;
 }
 
-
+static token_type state_not_operator_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::NOT_EQUAL)
+        default:
+            ttype = token_type::NOT;
+    }
+    return ttype;
+}
 
 int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
     std::string file_contents = std::string(std::istreambuf_iterator<char>(file),
@@ -396,6 +410,7 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
             _SIMPLE_CASE(lexer_state::BIN_AND_OPERATOR, ttype, state_bin_and_operator_handler(*it))
             _SIMPLE_CASE(lexer_state::BIN_OR_OPERATOR, ttype, state_bin_or_operator_handler(*it))
             _SIMPLE_CASE(lexer_state::BIN_NOR_OPERATOR, ttype, state_bin_nor_operator_handler(*it))
+            _SIMPLE_CASE(lexer_state::NOT_OPERATOR, ttype, state_not_operator_handler(*it))
 
             _SIMPLE_CASE(lexer_state::LEFT_SHIFT, ttype, state_left_shift_handler(*it))
             _SIMPLE_CASE(lexer_state::RIGHT_SHIFT, ttype, state_right_shift_handler(*it))
@@ -455,6 +470,9 @@ std::string tt_to_string(token_type type) {
         _SIMPLE_CASE(token_type::BREAK, buf, "BREAK")
         _SIMPLE_CASE(token_type::RETURN, buf, "RETURN")
 
+        _SIMPLE_CASE(token_type::NOT, buf, "NOT")
+        _SIMPLE_CASE(token_type::BIN_NOT, buf, "BIN_NOT")
+
         _SIMPLE_CASE(token_type::ID, buf, "ID")
         _SIMPLE_CASE(token_type::STRING, buf, "STRING")
         _SIMPLE_CASE(token_type::NUMBER, buf, "NUMBER")
@@ -469,8 +487,10 @@ std::string tt_to_string(token_type type) {
         _SIMPLE_CASE(token_type::COLON, buf, "COLON")
         _SIMPLE_CASE(token_type::LEFT_BRACKET, buf, "LEFT_BRACKET")
         _SIMPLE_CASE(token_type::RIGHT_BRACKET, buf, "RIGHT_BRACKET")
-        _SIMPLE_CASE(token_type::PIPE, buf, "PIPE")
         _SIMPLE_CASE(token_type::EQUAL, buf, "EQUAL")
+        _SIMPLE_CASE(token_type::NOT_EQUAL, buf, "NOT_EQUAL")
+        _SIMPLE_CASE(token_type::LESS_EQUAL, buf, "LESS_EQUAL")
+        _SIMPLE_CASE(token_type::MORE_EQUAL, buf, "MORE_EQUAL")
 
         _SIMPLE_CASE(token_type::DIV_ASSIGNMENT, buf, "DIV_ASSIGNMENT")
         _SIMPLE_CASE(token_type::PLUS_ASSIGNMENT, buf, "PLUS_ASSIGNMENT")
@@ -493,8 +513,12 @@ std::string tt_to_string(token_type type) {
         _SIMPLE_CASE(token_type::BIN_AND, buf, "BIN_AND")
         _SIMPLE_CASE(token_type::BIN_OR, buf, "BIN_OR")
         _SIMPLE_CASE(token_type::BIN_NOR, buf, "BIN_NOR")
+        _SIMPLE_CASE(token_type::LOG_AND, buf, "LOG_AND")
+        _SIMPLE_CASE(token_type::LOG_OR, buf, "LOG_OR")
         _SIMPLE_CASE(token_type::INCREM, buf, "INCREM")
         _SIMPLE_CASE(token_type::DECREM, buf, "DECREM")
+
+        // _SIMPLE_CASE(token_type::BIN_OR, buf, "BIN_OR")
 
         _SIMPLE_CASE(token_type::ARROW, buf, "ARROW")
         _SIMPLE_CASE(token_type::LEFT_SHIFT_OPERATOR, buf, "LEFT_SHIFT_OPERATOR")
@@ -502,6 +526,7 @@ std::string tt_to_string(token_type type) {
 
         _SIMPLE_CASE(token_type::LEFT_SHIFT, buf, "LEFT_SHIFT")
         _SIMPLE_CASE(token_type::RIGHT_SHIFT, buf, "RIGHT_SHIFT")
+        _SIMPLE_CASE(token_type::QUESTION_MARK, buf, "QUESTION_MARK")
 
         _SIMPLE_CASE(token_type::NONE, buf, "NONE")
     }

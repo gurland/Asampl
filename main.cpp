@@ -1,7 +1,7 @@
 ﻿// Asampl.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
 //
 
-#include "pch.h"
+// #include "pch.h"
 
 #include <iostream>
 #include <cstdio>
@@ -10,8 +10,8 @@
 #include <opencv2/opencv.hpp>
 
 #include "lexer.h"
-#include "parser.h"
-#include "interpreter.h"
+// #include "parser.h"
+// #include "interpreter.h"
 
 int main(int argc, char *argv[])
 {
@@ -21,15 +21,15 @@ int main(int argc, char *argv[])
 	}
 	const char *file_name = argv[1];
 
-    std::filesystem::path handlers_directory;
-    if (argc >= 3) {
-        handlers_directory = argv[2];
-    }
+    // std::filesystem::path handlers_directory;
+    // if (argc >= 3) {
+    //     handlers_directory = argv[2];
+    // }
 
-    std::filesystem::path libraries_directory;
-    if (argc >= 4) {
-        libraries_directory = argv[3];
-    }
+    // std::filesystem::path libraries_directory;
+    // if (argc >= 4) {
+    //     libraries_directory = argv[3];
+    // }
 
 	std::fstream file_stream(file_name);
 
@@ -38,35 +38,35 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	std::vector<Lexer::Token> lexem_sequence;
-	int code = Lexer::split_tokens(file_stream, lexem_sequence);
+	std::vector<token> lexem_sequence;
+	int code = split_tokens(file_stream, lexem_sequence);
 
 	if (code == -1) {
 		std::cerr << "Error while reading program file stream\n";
 		return 0;
 	}
 
-	token_print(lexem_sequence);
+	// token_print(lexem_sequence);
 	
-	Parser p(&lexem_sequence);
-	Tree *tree = p.buid_tree();
-	if (!tree) {
-		std::cerr << "Error while parsing sequence of lexemes\n";
-		return 0;
-	}
+	// Parser p(&lexem_sequence);
+	// Tree *tree = p.buid_tree();
+	// if (!tree) {
+	// 	std::cerr << "Error while parsing sequence of lexemes\n";
+	// 	return 0;
+	// }
 
-	tree->print(std::cout);
+	// tree->print(std::cout);
 
-	Program program;
-    program.set_handlers_directory(handlers_directory);
-    if (!libraries_directory.empty()) {
-        program.add_libraries_directory(libraries_directory);
-    }
-    program.load_stdlib();
-    program.execute(tree);
+	// Program program;
+    // program.set_handlers_directory(handlers_directory);
+    // if (!libraries_directory.empty()) {
+    //     program.add_libraries_directory(libraries_directory);
+    // }
+    // program.load_stdlib();
+    // program.execute(tree);
 
-	//Tree::free(tree);
-	return 0;
+	// //Tree::free(tree);
+	// return 0;
 	
 }
 

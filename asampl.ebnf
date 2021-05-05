@@ -64,7 +64,7 @@ assign = ternary, assign_ap;
 assign_ap = assign_op, ternary, assign_ap | none;
 assign_op = "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "|=" | "^=";
 
-ternary = log_or "|" log_or "?" expr ":" expr;
+ternary = log_or | log_or "?" expr ":" expr;
 
 log_or = log_and, log_or_ap;
 log_or_ap = "||", log_and, log_or_ap | none;
@@ -96,9 +96,7 @@ add_ap = ("+" | "-"), mult, add_ap | none;
 mult = unary, mult_ap;
 mult_ap = ("*" | "/" | "%"), unary, mult_ap | none;
 
-unary = postfix | ("+" | "-" | "!" | "~" | "++" | "--"), unary;
-
-postfix = primary | postfix, ("--" | "++");
+unary = postfix | ("+" | "-" | "!" | "~" | "++" | "--"), postfix;
 
 postfix = primary, postfix_ap;
 postfix_ap = ("--" | "++"), postfix_ap | none;
