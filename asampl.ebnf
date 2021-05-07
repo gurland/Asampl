@@ -6,12 +6,9 @@ library_decl = "library", id, "from", file_name;
 
 var_or_func_decl = var_decl_st | func_decl;
 
-var_decl_st = var_dev_without_init | var_dev_with_init;
-var_decl_without_init = "let", id, ";";
-var_decl_with_init = "let", id, "=", data, ";";
-data = expr
-   | arr_init;
-arr_init = "[", [arg_list], "]";
+var_decl_st = "let", id, ["=", expr], ";";
+
+arr = "[", [arg_list], "]";
 arg_list = expr, [",", arg_list];
 
 func_decl = "fn", id, "(", [param_list], ")", block_st;
@@ -40,7 +37,8 @@ case = match_list, "->", st;
 match_list = expr, ["|", match_list];
 def_case = "def", "->", st;
 
-timeline_st = "timeline", obj, func;
+timeline_st = "timeline", tl_arr, func;
+tl_arr = id | "{", [arg_list], "}";
 
 obj = id | obj_decl;
 obj_decl = "{", [fld_list], "}";
@@ -99,13 +97,16 @@ mult_ap = ("*" | "/" | "%"), unary, mult_ap | none;
 unary = postfix | ("+" | "-" | "!" | "~" | "++" | "--"), postfix;
 
 postfix = primary, postfix_ap;
-postfix_ap = ("--" | "++"), postfix_ap | none;
+postfix_ap = ("--" | "++" | ".", id), postfix_ap | none;
 
 primary = number
    | string
    | bool
    | var_or_call
-   | parentheses;
+   | parentheses
+   | obj_decl
+   | lambda
+   | arr;
 
 var_or_call = id, [fn_call];
 parentheses = "(", expr, ")";

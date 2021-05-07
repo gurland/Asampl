@@ -10,7 +10,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "lexer.h"
-// #include "parser.h"
+#include "parser.h"
 // #include "interpreter.h"
 
 int main(int argc, char *argv[])
@@ -42,10 +42,18 @@ int main(int argc, char *argv[])
 	int code = split_tokens(file_stream, lexem_sequence);
 
 	if (code == -1) {
-		std::cerr << "Error while reading program file stream\n";
+		std::cerr << "Error while spliting tokens\n";
 		return 0;
 	}
 
+	as_tree *tree = buid_tree(lexem_sequence);
+
+	if (!tree) {
+		std::cerr << "Error while parsing tokens\n";
+		return 0;
+	}
+
+	tree->print(std::cout);
 	// token_print(lexem_sequence);
 	
 	// Parser p(&lexem_sequence);

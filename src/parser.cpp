@@ -10,17 +10,17 @@ using tvec = std::vector<token>;
 #define cit const_iterator
 #endif /* cit */
 
-#define ERROR_MSG(expected, got) "ERROR: expected: " + \
-    std::string((expected)) + ", got: " + std::string((got))
+#define ERROR_MSG(expected, got, line) "ERROR: expected: " + std::string((expected)) + \
+    ", got: " + std::string((got)) +    \
+    ", line: " + std::to_string((line)) + ".\n"
 
 #define throw_error(p, expected) do {                       \
-    const token &__t = get_it_val((p));                     \
+    const token &__t = get_it_val((p));                                             \
+    auto __got = tt_to_string(__t.type) + ((get_vt(&__t, buffer) == tvt::STRING) ?  \
+                "[val: " + get_str_val(&__t, buffer) + "]" :                        \
+                "");                                                               \
     throw std::runtime_error(                               \
-        ERROR_MSG((expected), tt_to_string(__t.type) + (    \
-                (get_tvt(&__t) == tvt::STRING) ?            \
-                "[val: " + get_tstr_val(&__t) + "]" :       \
-                ""                                          \
-            ))                                              \
+        ERROR_MSG((expected), __got, __t.line)              \
         );                                                  \
 } while(0)
 
@@ -61,19 +61,12 @@ as_tree *take_token_of(parser *p, const std::vector<token_type> &types);
     }                                           \
 } while(0)
 
-class parser_type_error: public std::exception
+class parser_type_error: public std::runtime_error
 {
 public:
     parser_type_error(token_type _expected, token_type _got, int _line) :
-        expected(_expected), got(_got), line(_line)
+        std::runtime_error(ERROR_MSG(tt_to_string(_expected), tt_to_string(_got), _line))
     {}
-    std::string to_string() {
-        return "ERROR: expected " + tt_to_string(expected) +
-            " got " + tt_to_string(got) +
-            ". Line: " + std::to_string(line) + ".\n";
-    }
-    token_type expected, got;
-    int line;
 };
 
 static ast_nt ttype_to_atype(token_type type);
@@ -91,10 +84,7 @@ static as_tree *handler_decl(parser *p);
 static as_tree *library_decl(parser *p);
 static as_tree *var_or_func_decl(parser *p);
 static as_tree *var_decl_st(parser *p);
-static as_tree *var_dev_without_init(parser *p);
-static as_tree *var_dev_with_init(parser *p);
-static as_tree *data(parser *p);
-static as_tree *arr_init(parser *p);
+static as_tree *arr(parser *p);
 static as_tree *arg_list(parser *p);
 static as_tree *expr(parser *p);
 static as_tree *func_decl(parser *p);
@@ -181,8 +171,8 @@ as_tree *buid_tree(std::vector<token> &token_sequence) {
 
         return prog(&p);
     }
-    catch(std::exception &e) {
-
+    catch(std::runtime_error &e) {
+        std::cout << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -219,12 +209,17 @@ static as_tree *accept(parser *p, token_type ttype) {
     const token &t = get_it_val(p);
 	if (t.type == ttype) {
 		ast_nt atype = ttype_to_atype(ttype);
-		ast_node *node = (get_tvt(&t) == tvt::STRING) ?
-            new ast_node(atype, get_tstr_val(&t)) :
-            new ast_node(atype);
+		ast_node *node = ((get_vt(&t, buffer) == tvt::STRING) ?
+            new ast_node(atype, get_str_val(&t, buffer)) :
+            new ast_node(atype, get_int_val(&t, buffer)));
 
 		as_tree *tree = new as_tree(node);
         inc_it(p);
+
+        const token &t2 = get_it_val(p);
+        if (t2.line == 54) {
+            int a = 5;
+        }
         return tree;
 	}
 	return nullptr;
@@ -331,44 +326,26 @@ static as_tree *var_or_func_decl(parser *p) {
 }
 
 static as_tree *var_decl_st(parser *p) {
-    return ebnf_select(p, {var_dev_without_init, var_dev_with_init});
-}
-
-static as_tree *var_dev_without_init(parser *p) {
     as_tree *main_node = accept(p, token_type::LET);
     if (!main_node) {
         return nullptr;
     }
 
     take_token(p, main_node, token_type::ID);
-    return main_node;
-}
-
-static as_tree *var_dev_with_init(parser *p) {
-    as_tree *main_node = accept(p, token_type::LET);
-    if (!main_node) {
-        return nullptr;
+    if (bool_accept(p, token_type::ASSIGNMENT)) {
+        take_rule(p, main_node, expr, "expr");
     }
-
-    take_token(p, main_node, token_type::ID);
-    bool_expect(p, token_type::EQUAL);
-    as_tree *node = data(p);
-    main_node->add_child(node);
     bool_expect(p, token_type::SEMICOLON);
-    return main_node;
 }
 
-static as_tree *data(parser *p) {
-    return ebnf_select(p, {arr_init, expr});
-}
-
-static as_tree *arr_init(parser *p) {
+static as_tree *arr(parser *p) {
     if (!bool_accept(p, token_type::LEFT_SQUARE_BRACKET)) {
         return nullptr;
     }
-    as_tree *node = arg_list(p);
+    as_tree *main_node = new as_tree(new ast_node(ast_nt::ARRAY));
+    try_to_take_rule(p, main_node, arg_list);
     bool_expect(p, token_type::RIGHT_SQUARE_BRACKET);
-    return node;
+    return main_node;
 }
 
 static as_tree *arg_list(parser *p) {
@@ -536,23 +513,19 @@ static as_tree *timeline_st(parser *p) {
     }
 
     as_tree *main_node = new as_tree(new ast_node(ast_nt::TIMELINE));
-    as_tree *node = ebnf_select(p, {obj, func});
-    if (node) {
-        main_node->add_child(node);
-    } else {
-        throw_error(p, "obj | func");
-    }
+    take_rule(p, main_node, obj, "obj");
+    take_rule(p, main_node, func, "func");
     return main_node;
 }
 
-#define __load(p, load) do {                                        \
+#define __load(p, load, proposal) do {                              \
     parser *__p = (p);                                              \
     if (!bool_accept(p, token_type::load)) {                        \
         return nullptr;                                             \
     }                                                               \
     as_tree *__main_node = new as_tree(new ast_node(ast_nt::load)); \
     take_rule(__p, __main_node, expr, "expr");                      \
-    bool_expect(__p, token_type::FROM);                             \
+    bool_expect(__p, token_type::proposal);                         \
     take_rule(__p, __main_node, expr, "expr");                      \
     bool_expect(__p, token_type::WITH);                             \
     take_rule(__p, __main_node, expr, "expr");                      \
@@ -560,11 +533,11 @@ static as_tree *timeline_st(parser *p) {
 } while(0)
 
 static as_tree *download_st(parser *p) {
-    __load(p, DOWNLOAD);
+    __load(p, DOWNLOAD, FROM);
 }
 
 static as_tree *updload_st(parser *p) {
-    __load(p, UPLOAD);
+    __load(p, UPLOAD, TO);
 }
 
 static as_tree *jump_st(parser *p) {
@@ -670,6 +643,7 @@ static as_tree *assign(parser *p) {
 
 static as_tree *assign_ap(parser *p) {
     return ebnf_ap_recursive_rule(p, {
+        token_type::ASSIGNMENT,
         token_type::DIV_ASSIGNMENT,
         token_type::PLUS_ASSIGNMENT,
         token_type::MINUS_ASSIGNMENT,
@@ -831,6 +805,7 @@ static as_tree *postfix_ap(parser *p) {
     return ebnf_ap_recursive_rule(p, {
         token_type::INCREM,
         token_type::DECREM,
+        token_type::DOT,
     }, primary, postfix_ap);
 }
 
@@ -840,7 +815,10 @@ static as_tree *primary(parser *p) {
         string,
         boolean,
         parentheses,
-        var_or_call
+        var_or_call,
+        obj_decl,
+        lambda,
+        arr
     });
 }
 
@@ -857,14 +835,16 @@ static as_tree *string(parser *p) {
 }
 
 static as_tree *boolean(parser *p) {
-    return nullptr; //tbd
+    return accept(p, token_type::LOGIC);
 }
 
 static as_tree *var_or_call(parser *p) {
     as_tree *main_node = id(p);
-    as_tree *node = fn_call(p);
-    if (node) {
-        main_node->add_child(node);
+    if (main_node) {
+        as_tree *node = fn_call(p);
+        if (node) {
+            main_node->add_child(node);
+        }
     }
     return main_node;
 }
@@ -882,15 +862,197 @@ static as_tree *fn_call(parser *p) {
     if (!bool_accept(p, token_type::LEFT_BRACKET)) {
         return nullptr;
     }
-    as_tree *node = arg_list(p);
+    as_tree *main_node = new as_tree(new ast_node(ast_nt::FN_CALL));
+    try_to_take_rule(p, main_node, arg_list);
     bool_expect(p, token_type::RIGHT_BRACKET);
-    return node;
+    return main_node;
 }
 
 
 
 
 
-static ast_nt ttype_to_atype(token_type type) {
-    return (ast_nt)0;
+static ast_nt ttype_to_atype(token_type ttype) {
+    ast_nt atype = ast_nt::NONE;
+    switch(ttype) {
+        _SIMPLE_CASE(token_type::HANDLER, atype, ast_nt::HANDLER)
+        _SIMPLE_CASE(token_type::LIBRARY, atype, ast_nt::LIBRARY)
+        _SIMPLE_CASE(token_type::FROM, atype, ast_nt::FROM)
+        _SIMPLE_CASE(token_type::IF, atype, ast_nt::IF)
+        _SIMPLE_CASE(token_type::ELSE, atype, ast_nt::ELSE)
+        _SIMPLE_CASE(token_type::WHILE, atype, ast_nt::WHILE)
+        _SIMPLE_CASE(token_type::MATCH, atype, ast_nt::MATCH)
+        _SIMPLE_CASE(token_type::DEF_CASE, atype, ast_nt::DEF_CASE)
+        _SIMPLE_CASE(token_type::TIMELINE, atype, ast_nt::TIMELINE)
+        _SIMPLE_CASE(token_type::DOWNLOAD, atype, ast_nt::DOWNLOAD)
+        _SIMPLE_CASE(token_type::UPLOAD, atype, ast_nt::UPLOAD)
+        _SIMPLE_CASE(token_type::TO, atype, ast_nt::TO)
+        _SIMPLE_CASE(token_type::FN, atype, ast_nt::FN)
+        _SIMPLE_CASE(token_type::LET, atype, ast_nt::LET)
+        _SIMPLE_CASE(token_type::LOGIC, atype, ast_nt::LOGIC)
+        _SIMPLE_CASE(token_type::WITH, atype, ast_nt::WITH)
+        _SIMPLE_CASE(token_type::CONTINUE, atype, ast_nt::CONTINUE)
+        _SIMPLE_CASE(token_type::BREAK, atype, ast_nt::BREAK)
+        _SIMPLE_CASE(token_type::RETURN, atype, ast_nt::RETURN)
+
+        _SIMPLE_CASE(token_type::NOT, atype, ast_nt::NOT)
+        _SIMPLE_CASE(token_type::BIN_NOT, atype, ast_nt::BIN_NOT)
+
+        _SIMPLE_CASE(token_type::ID, atype, ast_nt::ID)
+        _SIMPLE_CASE(token_type::STRING, atype, ast_nt::STRING)
+        _SIMPLE_CASE(token_type::NUMBER, atype, ast_nt::NUMBER)
+
+        _SIMPLE_CASE(token_type::SEMICOLON, atype, ast_nt::SEMICOLON)
+        _SIMPLE_CASE(token_type::LEFT_BRACE, atype, ast_nt::LEFT_BRACE)
+        _SIMPLE_CASE(token_type::RIGHT_BRACE, atype, ast_nt::RIGHT_BRACE)
+        _SIMPLE_CASE(token_type::LEFT_SQUARE_BRACKET, atype, ast_nt::LEFT_SQUARE_BRACKET)
+        _SIMPLE_CASE(token_type::RIGHT_SQUARE_BRACKET, atype, ast_nt::RIGHT_SQUARE_BRACKET)
+        _SIMPLE_CASE(token_type::COMMA, atype, ast_nt::COMMA)
+        _SIMPLE_CASE(token_type::DOT, atype, ast_nt::DOT)
+        _SIMPLE_CASE(token_type::COLON, atype, ast_nt::COLON)
+        _SIMPLE_CASE(token_type::LEFT_BRACKET, atype, ast_nt::LEFT_BRACKET)
+        _SIMPLE_CASE(token_type::RIGHT_BRACKET, atype, ast_nt::RIGHT_BRACKET)
+        _SIMPLE_CASE(token_type::EQUAL, atype, ast_nt::EQUAL)
+        _SIMPLE_CASE(token_type::NOT_EQUAL, atype, ast_nt::NOT_EQUAL)
+        _SIMPLE_CASE(token_type::LESS_EQUAL, atype, ast_nt::LESS_EQUAL)
+        _SIMPLE_CASE(token_type::MORE_EQUAL, atype, ast_nt::MORE_EQUAL)
+
+        _SIMPLE_CASE(token_type::DIV_ASSIGNMENT, atype, ast_nt::DIV_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::PLUS_ASSIGNMENT, atype, ast_nt::PLUS_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::MINUS_ASSIGNMENT, atype, ast_nt::MINUS_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::MULT_ASSIGNMENT, atype, ast_nt::MULT_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::MDIV_ASSIGNMENT, atype, ast_nt::MDIV_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::LEFT_SHIFT_ASSIGNMENT, atype, ast_nt::LEFT_SHIFT_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::RIGHT_SHIFT_ASSIGNMENT, atype, ast_nt::RIGHT_SHIFT_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::BIN_AND_ASSIGNMENT, atype, ast_nt::BIN_AND_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::BIN_OR_ASSIGNMENT, atype, ast_nt::BIN_OR_ASSIGNMENT)
+        _SIMPLE_CASE(token_type::BIN_NOR_ASSIGNMENT, atype, ast_nt::BIN_NOR_ASSIGNMENT)
+
+        _SIMPLE_CASE(token_type::DIV, atype, ast_nt::DIV)
+        _SIMPLE_CASE(token_type::PLUS, atype, ast_nt::PLUS)
+        _SIMPLE_CASE(token_type::MINUS, atype, ast_nt::MINUS)
+        _SIMPLE_CASE(token_type::MULT, atype, ast_nt::MULT)
+        _SIMPLE_CASE(token_type::MDIV, atype, ast_nt::MDIV)
+        _SIMPLE_CASE(token_type::LESS, atype, ast_nt::LESS)
+        _SIMPLE_CASE(token_type::MORE, atype, ast_nt::MORE)
+        _SIMPLE_CASE(token_type::BIN_AND, atype, ast_nt::BIN_AND)
+        _SIMPLE_CASE(token_type::BIN_OR, atype, ast_nt::BIN_OR)
+        _SIMPLE_CASE(token_type::BIN_NOR, atype, ast_nt::BIN_NOR)
+        _SIMPLE_CASE(token_type::LOG_AND, atype, ast_nt::LOG_AND)
+        _SIMPLE_CASE(token_type::LOG_OR, atype, ast_nt::LOG_OR)
+        _SIMPLE_CASE(token_type::INCREM, atype, ast_nt::INCREM)
+        _SIMPLE_CASE(token_type::DECREM, atype, ast_nt::DECREM)
+
+        _SIMPLE_CASE(token_type::ARROW, atype, ast_nt::ARROW)
+        _SIMPLE_CASE(token_type::LEFT_SHIFT_OPERATOR, atype, ast_nt::LEFT_SHIFT_OPERATOR)
+        _SIMPLE_CASE(token_type::RIGHT_SHIFT_OPERATOR, atype, ast_nt::RIGHT_SHIFT_OPERATOR)
+
+        _SIMPLE_CASE(token_type::LEFT_SHIFT, atype, ast_nt::LEFT_SHIFT)
+        _SIMPLE_CASE(token_type::RIGHT_SHIFT, atype, ast_nt::RIGHT_SHIFT)
+        _SIMPLE_CASE(token_type::QUESTION_MARK, atype, ast_nt::QUESTION_MARK)
+
+        _SIMPLE_CASE(token_type::NONE, atype, ast_nt::NONE)
+    }
+    return atype;
+}
+
+std::string at_to_string(ast_nt type) {
+#define C2S(x) case ast_nt::x: return #x;
+    switch(type) {
+        C2S(PROGRAM)
+
+        C2S(PARAM_LIST)
+        C2S(ARG_LIST)
+
+        C2S(FN_CALL)
+        C2S(ARRAY)
+
+        C2S(BLOCK)
+        C2S(IF)
+        C2S(WHILE)
+        C2S(MATCH)
+        C2S(CASE)
+        C2S(DEF_CASE)
+        C2S(MATCH_LIST)
+
+        C2S(OBJ_DECL)
+        C2S(OBJ_FIELD)
+
+        C2S(LAMBDA)
+
+        C2S(HANDLER)
+        C2S(LIBRARY)
+        C2S(FROM)
+        C2S(ELSE)
+        C2S(TIMELINE)
+        C2S(DOWNLOAD)
+        C2S(UPLOAD)
+        C2S(TO)
+        C2S(FN)
+        C2S(LET)
+        C2S(LOGIC)
+        C2S(WITH)
+        C2S(CONTINUE)
+        C2S(BREAK)
+        C2S(RETURN)
+
+        C2S(NOT)
+        C2S(BIN_NOT)
+
+        C2S(ID)
+        C2S(STRING)
+        C2S(NUMBER)
+
+        C2S(SEMICOLON)
+        C2S(LEFT_BRACE)
+        C2S(RIGHT_BRACE)
+        C2S(LEFT_SQUARE_BRACKET)
+        C2S(RIGHT_SQUARE_BRACKET)
+        C2S(COMMA)
+        C2S(DOT)
+        C2S(COLON)
+        C2S(LEFT_BRACKET)
+        C2S(RIGHT_BRACKET)
+        C2S(EQUAL)
+        C2S(NOT_EQUAL)
+        C2S(LESS_EQUAL)
+        C2S(MORE_EQUAL)
+
+        C2S(DIV_ASSIGNMENT)
+        C2S(PLUS_ASSIGNMENT)
+        C2S(MINUS_ASSIGNMENT)
+        C2S(MULT_ASSIGNMENT)
+        C2S(MDIV_ASSIGNMENT)
+        C2S(LEFT_SHIFT_ASSIGNMENT)
+        C2S(RIGHT_SHIFT_ASSIGNMENT)
+        C2S(BIN_AND_ASSIGNMENT)
+        C2S(BIN_OR_ASSIGNMENT)
+        C2S(BIN_NOR_ASSIGNMENT)
+
+        C2S(DIV)
+        C2S(PLUS)
+        C2S(MINUS)
+        C2S(MULT)
+        C2S(MDIV)
+        C2S(LESS)
+        C2S(MORE)
+        C2S(BIN_AND)
+        C2S(BIN_OR)
+        C2S(BIN_NOR)
+        C2S(LOG_AND)
+        C2S(LOG_OR)
+        C2S(INCREM)
+        C2S(DECREM)
+
+        C2S(ARROW)
+        C2S(LEFT_SHIFT_OPERATOR)
+        C2S(RIGHT_SHIFT_OPERATOR)
+
+        C2S(LEFT_SHIFT)
+        C2S(RIGHT_SHIFT)
+        C2S(QUESTION_MARK)
+
+        C2S(NONE)
+    }
+#undef C2S
 }

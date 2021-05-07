@@ -11,6 +11,8 @@
 #define contains(container, val) \
     (std::find((container).begin(), (container).end(), (val)) != (container).end())
 
+#define is_garbage(c) ((int)(c) < 33)
+
 enum class lexer_state {
 	NONE,
 	WORD,
@@ -34,6 +36,7 @@ enum class lexer_state {
 
     LEFT_SHIFT,
     RIGHT_SHIFT,
+    EQUAL,
 };
 
 static std::map<std::string, token_type> key_words = {
@@ -47,12 +50,12 @@ static std::map<std::string, token_type> key_words = {
     {"def",      token_type::DEF_CASE},
     {"timeline", token_type::TIMELINE},
     {"download", token_type::DOWNLOAD},
-    {"updload",  token_type::UPLOAD},
+    {"upload",  token_type::UPLOAD},
     {"to",       token_type::TO},
     {"fn",       token_type::FN},
     {"let",      token_type::LET},
-    {"true",     token_type::TRUE},
-    {"false",    token_type::FALSE},
+    {"true",     token_type::LOGIC},
+    {"false",    token_type::LOGIC},
     {"with",     token_type::WITH},
     {"continue", token_type::CONTINUE},
     {"break",    token_type::BREAK},
@@ -90,12 +93,12 @@ static std::vector<token_type> delay_types = {
     token_type::RIGHT_SHIFT,
     token_type::ELSE,
     token_type::DEF_CASE,
-    token_type::TRUE,
-    token_type::FALSE,
+    token_type::LOGIC,
     token_type::WITH,
     token_type::CONTINUE,
     token_type::BREAK,
     token_type::RETURN,
+    token_type::ASSIGNMENT,
 };
 
 static std::vector<lexer_state> wrt_states = {
@@ -110,6 +113,11 @@ static int line = 1;
 static lexer_state state = lexer_state::NONE;
 
 static bool point_in_num = false;
+
+static inline char get_next_char(std::string::cit &it);
+static void get_to_next_line(std::string::cit &it);
+static void get_to_next_nospace(std::string::cit &it);
+static void get_to_next(std::string::cit &it);
 
 static inline char get_next_char(std::string::cit &it) {
     return *(++it);
@@ -165,11 +173,6 @@ static void file_promotion(std::string::cit &it) {
     }
 }
 
-#define _SIMPLE_CASE(match_val, var, val)       \
-    case match_val:                             \
-        var = val;                              \
-        break;                                  \
-
 static token_type state_none_handle(const std::string &buf, char c) {
     token_type ttype = token_type::NONE;
     switch(c) {
@@ -183,10 +186,10 @@ static token_type state_none_handle(const std::string &buf, char c) {
         _SIMPLE_CASE(':', ttype, token_type::COLON)
         _SIMPLE_CASE('(', ttype, token_type::LEFT_BRACKET)
         _SIMPLE_CASE(')', ttype, token_type::RIGHT_BRACKET)
-        _SIMPLE_CASE('=', ttype, token_type::EQUAL)
         _SIMPLE_CASE('~', ttype, token_type::BIN_NOT)
         _SIMPLE_CASE('?', ttype, token_type::QUESTION_MARK)
         _SIMPLE_CASE('\"', state, lexer_state::STRING)
+        _SIMPLE_CASE('=', state, lexer_state::EQUAL)
         _SIMPLE_CASE('/', state, lexer_state::DIV_OPERATOR)
         _SIMPLE_CASE('+', state, lexer_state::PLUS_OPERATOR)
         _SIMPLE_CASE('-', state, lexer_state::MINUS_OPERATOR)
@@ -384,6 +387,16 @@ static token_type state_not_operator_handler(char c) {
     return ttype;
 }
 
+static token_type state_equal_handler(char c) {
+    token_type ttype = token_type::NONE;
+    switch(c) {
+        _SIMPLE_CASE('=', ttype, token_type::EQUAL)
+        default:
+            ttype = token_type::ASSIGNMENT;
+    }
+    return ttype;
+}
+
 int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
     std::string file_contents = std::string(std::istreambuf_iterator<char>(file),
                                             std::istreambuf_iterator<char>());
@@ -414,24 +427,24 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
 
             _SIMPLE_CASE(lexer_state::LEFT_SHIFT, ttype, state_left_shift_handler(*it))
             _SIMPLE_CASE(lexer_state::RIGHT_SHIFT, ttype, state_right_shift_handler(*it))
+            _SIMPLE_CASE(lexer_state::EQUAL, ttype, state_equal_handler(*it))
         }
 
         if (ttype != token_type::NONE) {
             if (store_buf(ttype)) {
                 token_sequence.emplace_back(buf, ttype, line);
             } else {
-                token_sequence.emplace_back((int)0, ttype, line);
+                token_sequence.emplace_back((int)((ttype == token_type::LOGIC && buf == "true") ? 1 : 0), ttype, line);
             }
-            if (ttype == token_type::NUMBER) {
-                point_in_num = false;
-            }
-            // token_sequence.emplace_back((store_buf(ttype)) ? buf : (int)0, ttype, line);
-            state = lexer_state::NONE;
-            buf.clear();
+
             if (contains(delay_types, ttype)) {
                 get_next = false;
             }
+
+            state = lexer_state::NONE;
             ttype = token_type::NONE;
+            point_in_num = false;
+            buf.clear();
         }
 
         if (contains(wrt_states, state)) {
@@ -463,8 +476,7 @@ std::string tt_to_string(token_type type) {
         _SIMPLE_CASE(token_type::TO, buf, "TO")
         _SIMPLE_CASE(token_type::FN, buf, "FN")
         _SIMPLE_CASE(token_type::LET, buf, "LET")
-        _SIMPLE_CASE(token_type::TRUE, buf, "TRUE")
-        _SIMPLE_CASE(token_type::FALSE, buf, "FALSE")
+        _SIMPLE_CASE(token_type::LOGIC, buf, "LOGIC")
         _SIMPLE_CASE(token_type::WITH, buf, "WITH")
         _SIMPLE_CASE(token_type::CONTINUE, buf, "CONTINUE")
         _SIMPLE_CASE(token_type::BREAK, buf, "BREAK")

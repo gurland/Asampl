@@ -22,8 +22,7 @@ enum class token_type {
     TO,
     FN,
     LET,
-    TRUE,
-    FALSE,
+    LOGIC,
     WITH,
     CONTINUE,
     BREAK,
@@ -85,19 +84,19 @@ enum class token_type {
     LEFT_SHIFT,
     RIGHT_SHIFT,
     QUESTION_MARK,
+    ASSIGNMENT,
 
     NONE,
 };
 
-enum class token_variant_type {
-    INT = 0,
-    STRING,
-};
+#define _SIMPLE_CASE(match_val, var, val)       \
+    case match_val:                             \
+        var = val;                              \
+        break;                                  \
 
-using tvt = token_variant_type;
-#define get_tvt(t) ((tvt)((t)->buffer.index()))
-#define get_tstr_val(t) (std::get<std::string>((t)->buffer))
-// #define get_tint_val(token) (std::get<int>((token)->buffer))
+
+#include "vt.h"
+using tvt = vt;
 
 class token {
 public:
