@@ -10,15 +10,15 @@ using tvec = std::vector<token>;
 #define cit const_iterator
 #endif /* cit */
 
-#define ERROR_MSG(expected, got, line) "ERROR: expected: " + std::string((expected)) + \
-    ", got: " + std::string((got)) +    \
+#define ERROR_MSG(expected, got, line) "ERROR: expected: " + std::string((expected)) +  \
+    ", got: " + std::string((got)) +                                                    \
     ", line: " + std::to_string((line)) + ".\n"
 
 #define throw_error(p, expected) do {                       \
     const token &__t = get_it_val((p));                                             \
     auto __got = tt_to_string(__t.type) + ((get_vt(&__t, buffer) == tvt::STRING) ?  \
                 "[val: " + get_str_val(&__t, buffer) + "]" :                        \
-                "");                                                               \
+                "");                                                                \
     throw std::runtime_error(                               \
         ERROR_MSG((expected), __got, __t.line)              \
         );                                                  \
@@ -79,13 +79,14 @@ static bool bool_expect(parser *p, token_type ttype);
 static bool ebnf_multiple(parser *p, as_tree *parent_node, grammar_rule rule);
 static as_tree *ebnf_select(parser *p, const std::vector<grammar_rule> &rules);
 
+static void append_arg_list(parser *p, as_tree *parent_node);
+
 static as_tree *prog(parser *p);
 static as_tree *handler_decl(parser *p);
 static as_tree *library_decl(parser *p);
 static as_tree *var_or_func_decl(parser *p);
 static as_tree *var_decl_st(parser *p);
 static as_tree *arr(parser *p);
-static as_tree *arg_list(parser *p);
 static as_tree *expr(parser *p);
 static as_tree *func_decl(parser *p);
 static as_tree *param_list(parser *p);
@@ -149,6 +150,7 @@ static as_tree *boolean(parser *p);
 static as_tree *var_or_call(parser *p);
 static as_tree *parentheses(parser *p);
 static as_tree *fn_call(parser *p);
+static as_tree *arr_el(parser *p);
 
 as_tree *take_token_of(parser *p, const std::vector<token_type> &types) {
     as_tree *node = nullptr;
@@ -207,6 +209,12 @@ static as_tree *accept(parser *p, token_type ttype) {
     }
 
     const token &t = get_it_val(p);
+    auto str = ((get_vt(&t, buffer) == vt::STRING) ?
+			get_str_val(&t, buffer) :
+			"0");
+    // if (str == "main") {
+    //     int a = 0;
+    // }
 	if (t.type == ttype) {
 		ast_nt atype = ttype_to_atype(ttype);
 		ast_node *node = ((get_vt(&t, buffer) == tvt::STRING) ?
@@ -216,10 +224,10 @@ static as_tree *accept(parser *p, token_type ttype) {
 		as_tree *tree = new as_tree(node);
         inc_it(p);
 
-        const token &t2 = get_it_val(p);
-        if (t2.line == 54) {
-            int a = 5;
-        }
+        // const token &t2 = get_it_val(p);
+        // if (t2.line == 54) {
+        //     int a = 5;
+        // }
         return tree;
 	}
 	return nullptr;
@@ -336,6 +344,7 @@ static as_tree *var_decl_st(parser *p) {
         take_rule(p, main_node, expr, "expr");
     }
     bool_expect(p, token_type::SEMICOLON);
+    return main_node;
 }
 
 static as_tree *arr(parser *p) {
@@ -343,27 +352,22 @@ static as_tree *arr(parser *p) {
         return nullptr;
     }
     as_tree *main_node = new as_tree(new ast_node(ast_nt::ARRAY));
-    try_to_take_rule(p, main_node, arg_list);
+    append_arg_list(p, main_node);
     bool_expect(p, token_type::RIGHT_SQUARE_BRACKET);
     return main_node;
 }
 
-static as_tree *arg_list(parser *p) {
+static void append_arg_list(parser *p, as_tree *parent_node) {
     as_tree *expr_node = expr(p);
-    if (!expr_node) {
-        return nullptr;
-    }
-    as_tree *main_node = new as_tree(new ast_node(ast_nt::ARG_LIST));
     if (expr_node) {
-        main_node->add_child(expr_node);
+        parent_node->add_child(expr_node);
         while(true) {
             if (!bool_accept(p, token_type::COMMA)) {
                 break;
             }
-            take_rule(p, main_node, expr, "expr");
+            take_rule(p, parent_node, expr, "expr");
         }
     }
-    return main_node;
 }
 
 static as_tree *func_decl(parser *p) {
@@ -386,7 +390,7 @@ static as_tree *param_list(parser *p) {
     }
     as_tree *main_node = new as_tree(new ast_node(ast_nt::PARAM_LIST));
     if (id_node) {
-        main_node->add_child(id_node);
+    main_node->add_child(id_node);
         while(true) {
             if (!bool_accept(p, token_type::COMMA)) {
                 break;
@@ -399,8 +403,8 @@ static as_tree *param_list(parser *p) {
 
 static as_tree *st(parser *p) {
     return ebnf_select(p, {
-        expr_st,
         block_st,
+        expr_st,
         var_decl_st,
         select_st,
         iter_st,
@@ -844,6 +848,11 @@ static as_tree *var_or_call(parser *p) {
         as_tree *node = fn_call(p);
         if (node) {
             main_node->add_child(node);
+        } else {
+            node = arr_el(p);
+            if (node) {
+                main_node->add_child(node);
+            }
         }
     }
     return main_node;
@@ -863,14 +872,20 @@ static as_tree *fn_call(parser *p) {
         return nullptr;
     }
     as_tree *main_node = new as_tree(new ast_node(ast_nt::FN_CALL));
-    try_to_take_rule(p, main_node, arg_list);
+    append_arg_list(p, main_node);
     bool_expect(p, token_type::RIGHT_BRACKET);
     return main_node;
 }
 
-
-
-
+static as_tree *arr_el(parser *p) {
+    if (!bool_accept(p, token_type::LEFT_SQUARE_BRACKET)) {
+        return nullptr;
+    }
+    as_tree *main_node = new as_tree(new ast_node(ast_nt::ARR_EL));
+    take_rule(p, main_node, expr, "expr");
+    bool_expect(p, token_type::RIGHT_SQUARE_BRACKET);
+    return main_node;
+}
 
 static ast_nt ttype_to_atype(token_type ttype) {
     ast_nt atype = ast_nt::NONE;
@@ -917,6 +932,7 @@ static ast_nt ttype_to_atype(token_type ttype) {
         _SIMPLE_CASE(token_type::LESS_EQUAL, atype, ast_nt::LESS_EQUAL)
         _SIMPLE_CASE(token_type::MORE_EQUAL, atype, ast_nt::MORE_EQUAL)
 
+        _SIMPLE_CASE(token_type::ASSIGNMENT, atype, ast_nt::ASSIGNMENT)
         _SIMPLE_CASE(token_type::DIV_ASSIGNMENT, atype, ast_nt::DIV_ASSIGNMENT)
         _SIMPLE_CASE(token_type::PLUS_ASSIGNMENT, atype, ast_nt::PLUS_ASSIGNMENT)
         _SIMPLE_CASE(token_type::MINUS_ASSIGNMENT, atype, ast_nt::MINUS_ASSIGNMENT)
@@ -966,6 +982,7 @@ std::string at_to_string(ast_nt type) {
 
         C2S(FN_CALL)
         C2S(ARRAY)
+        C2S(ARR_EL)
 
         C2S(BLOCK)
         C2S(IF)
@@ -1018,6 +1035,7 @@ std::string at_to_string(ast_nt type) {
         C2S(LESS_EQUAL)
         C2S(MORE_EQUAL)
 
+        C2S(ASSIGNMENT)
         C2S(DIV_ASSIGNMENT)
         C2S(PLUS_ASSIGNMENT)
         C2S(MINUS_ASSIGNMENT)
@@ -1055,4 +1073,5 @@ std::string at_to_string(ast_nt type) {
         C2S(NONE)
     }
 #undef C2S
+    return "";
 }

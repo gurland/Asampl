@@ -18,6 +18,7 @@ enum class ast_node_type {
 
 	FN_CALL,
 	ARRAY,
+	ARR_EL,
 
 	BLOCK,
 	IF,
@@ -70,6 +71,7 @@ enum class ast_node_type {
 	LESS_EQUAL,
 	MORE_EQUAL,
 
+	ASSIGNMENT,
 	DIV_ASSIGNMENT,
 	PLUS_ASSIGNMENT,
 	MINUS_ASSIGNMENT,
@@ -168,9 +170,9 @@ public:
 			file << "|-";
 			new_indent = indent + "|*";
 		}
-		if (get_vt(this->node, value) == vt::STRING && get_str_val(this->node, value) == "fn") {
-			int il = 0;
-		}
+		// if (get_vt(this->node, value) == vt::STRING && get_str_val(this->node, value) == "fn") {
+		// 	int il = 0;
+		// }
 		file << ((get_vt(this->node, value) == vt::STRING) ?
 			get_str_val(this->node, value) + "\n" :
 			at_to_string(this->node->type) + "\n");
