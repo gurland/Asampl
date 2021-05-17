@@ -1,5 +1,4 @@
-handler string from string-stream-handler;
-library lib from lib-file;
+
 
 //- render
 
@@ -10,13 +9,16 @@ fn func(s2, d4) {
 fn main() {
     let source = "data/r.txt";
     let var2 = {};
+    let var4 = 123;
+    let var45 = 123.123;
     let var3 = {
         var2 : 1,
         "b" : 2
     };
-
+    import lib from lib-file;
+    import lib from lib-file.asa;
     let context = init_context(source="", header=string);
-
+    import handler string from string-stream-handler;
     let func_var = func;
     func_var();
 

@@ -9,7 +9,7 @@
 
 enum class token_type {
     HANDLER,
-    LIBRARY,
+    IMPORT,
     FROM,
     IF,
     ELSE,
@@ -85,6 +85,7 @@ enum class token_type {
     RIGHT_SHIFT,
     QUESTION_MARK,
     ASSIGNMENT,
+    FILE_NAME,
 
     NONE,
 };
@@ -104,10 +105,13 @@ public:
     token(const std::string &_buffer, token_type _type, int _line) :
         buffer(_buffer), type(_type), line(_line) {}
 
-    token(int, token_type _type, int _line) :
-        buffer(0), type(_type), line(_line) {}
+    token(long _val, token_type _type, int _line) :
+        buffer(_val), type(_type), line(_line) {}
 
-    std::variant<int, std::string> buffer;
+    token(double _val, token_type _type, int _line) :
+        buffer(_val), type(_type), line(_line) {}
+
+    std::variant<long, std::string, double> buffer;
     token_type type;
     int line;
 };

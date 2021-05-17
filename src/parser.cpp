@@ -41,6 +41,13 @@ using grammar_rule = std::function<as_tree *(parser *)>;
     pnode->add_child(__node);               \
 } while(0)
 
+#define try_to_take_token(p, pnode, ttype) do { \
+    as_tree *__node = accept((p), (ttype));     \
+    if (__node) {                               \
+        pnode->add_child(__node);               \
+    }                                           \
+} while(0)
+
 as_tree *take_token_of(parser *p, const std::vector<token_type> &types);
 
 #define take_rule(p, pnode, rule, err_msg) do { \
@@ -82,8 +89,6 @@ static as_tree *ebnf_select(parser *p, const std::vector<grammar_rule> &rules);
 static void append_arg_list(parser *p, as_tree *parent_node);
 
 static as_tree *prog(parser *p);
-static as_tree *handler_decl(parser *p);
-static as_tree *library_decl(parser *p);
 static as_tree *var_or_func_decl(parser *p);
 static as_tree *var_decl_st(parser *p);
 static as_tree *arr(parser *p);
@@ -99,6 +104,7 @@ static as_tree *match_st(parser *p);
 static as_tree *timeline_st(parser *p);
 static as_tree *download_st(parser *p);
 static as_tree *updload_st(parser *p);
+static as_tree *import_st(parser *p);
 static as_tree *jump_st(parser *p);
 
 static as_tree *case_handler(parser *p);
@@ -186,8 +192,6 @@ void release_tree(as_tree *tree) {
 
 static as_tree *prog(parser *p) {
     as_tree *prog_node = new as_tree(new ast_node(ast_nt::PROGRAM));
-    ebnf_multiple(p, prog_node, handler_decl);
-    ebnf_multiple(p, prog_node, library_decl);
     ebnf_multiple(p, prog_node, var_or_func_decl);
     return prog_node;
 }
@@ -209,18 +213,26 @@ static as_tree *accept(parser *p, token_type ttype) {
     }
 
     const token &t = get_it_val(p);
-    auto str = ((get_vt(&t, buffer) == vt::STRING) ?
-			get_str_val(&t, buffer) :
-			"0");
+    // auto str = ((get_vt(&t, buffer) == vt::STRING) ?
+	// 		get_str_val(&t, buffer) :
+	// 		"0");
     // if (str == "main") {
     //     int a = 0;
     // }
 	if (t.type == ttype) {
 		ast_nt atype = ttype_to_atype(ttype);
-		ast_node *node = ((get_vt(&t, buffer) == tvt::STRING) ?
-            new ast_node(atype, get_str_val(&t, buffer)) :
-            new ast_node(atype, get_int_val(&t, buffer)));
-
+        ast_node *node = nullptr;
+		// ast_node *node= ((get_vt(&t, buffer) == tvt::STRING) ?
+        //     new ast_node(atype, get_str_val(&t, buffer)) :
+        //     new ast_node(atype, get_int_val(&t, buffer)));
+        switch(get_vt(&t, buffer)) {
+            _SIMPLE_CASE(tvt::STRING, node, new ast_node(atype, get_str_val(&t, buffer)))
+            _SIMPLE_CASE(tvt::INT, node, new ast_node(atype, get_int_val(&t, buffer)))
+            _SIMPLE_CASE(tvt::FLOAT, node, new ast_node(atype, get_flt_val(&t, buffer)))
+            default: {
+                throw_error(p, "correct variant type");
+            }
+        }
 		as_tree *tree = new as_tree(node);
         inc_it(p);
 
@@ -308,25 +320,24 @@ static as_tree *ebnf_ap_recursive_rule(parser *p, const std::vector<token_type> 
 	return op_node;
 }
 
-static inline as_tree *__hl_decl(parser *p, token_type ttype) {
-    as_tree *main_node = accept(p, ttype);
-    if (!main_node) {
+static as_tree *import_st(parser *p) {
+    if (!bool_accept(p, token_type::IMPORT)) {
         return nullptr;
     }
-
+    as_tree *main_node = new as_tree(new ast_node(ast_nt::IMPORT));
+    try_to_take_token(p, main_node, token_type::HANDLER);
     take_token(p, main_node, token_type::ID);
     bool_expect(p, token_type::FROM);
-    take_token(p, main_node, token_type::ID); //file_name
-    bool_expect(p, token_type::SEMICOLON);
+    as_tree *file_name = take_token_of(p, {
+        token_type::ID,
+        token_type::FILE_NAME
+    });
+    if (file_name) {
+		main_node->add_child(file_name);
+	} else {
+        throw_error(p, "file_name or id");
+    }
     return main_node;
-}
-
-static as_tree *handler_decl(parser *p) {
-    return __hl_decl(p, token_type::HANDLER);
-}
-
-static as_tree *library_decl(parser *p) {
-    return __hl_decl(p, token_type::LIBRARY);
 }
 
 static as_tree *var_or_func_decl(parser *p) {
@@ -412,6 +423,7 @@ static as_tree *st(parser *p) {
         timeline_st,
         download_st,
         updload_st,
+        import_st,
         jump_st
     });
 }
@@ -891,7 +903,7 @@ static ast_nt ttype_to_atype(token_type ttype) {
     ast_nt atype = ast_nt::NONE;
     switch(ttype) {
         _SIMPLE_CASE(token_type::HANDLER, atype, ast_nt::HANDLER)
-        _SIMPLE_CASE(token_type::LIBRARY, atype, ast_nt::LIBRARY)
+        _SIMPLE_CASE(token_type::IMPORT, atype, ast_nt::IMPORT)
         _SIMPLE_CASE(token_type::FROM, atype, ast_nt::FROM)
         _SIMPLE_CASE(token_type::IF, atype, ast_nt::IF)
         _SIMPLE_CASE(token_type::ELSE, atype, ast_nt::ELSE)
@@ -966,6 +978,7 @@ static ast_nt ttype_to_atype(token_type ttype) {
         _SIMPLE_CASE(token_type::LEFT_SHIFT, atype, ast_nt::LEFT_SHIFT)
         _SIMPLE_CASE(token_type::RIGHT_SHIFT, atype, ast_nt::RIGHT_SHIFT)
         _SIMPLE_CASE(token_type::QUESTION_MARK, atype, ast_nt::QUESTION_MARK)
+        _SIMPLE_CASE(token_type::FILE_NAME, atype, ast_nt::FILE_NAME)
 
         _SIMPLE_CASE(token_type::NONE, atype, ast_nt::NONE)
     }
@@ -998,7 +1011,7 @@ std::string at_to_string(ast_nt type) {
         C2S(LAMBDA)
 
         C2S(HANDLER)
-        C2S(LIBRARY)
+        C2S(IMPORT)
         C2S(FROM)
         C2S(ELSE)
         C2S(TIMELINE)
@@ -1069,6 +1082,7 @@ std::string at_to_string(ast_nt type) {
         C2S(LEFT_SHIFT)
         C2S(RIGHT_SHIFT)
         C2S(QUESTION_MARK)
+        C2S(FILE_NAME)
 
         C2S(NONE)
     }

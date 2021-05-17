@@ -1,8 +1,4 @@
-prog = {handler_decl}, {library_decl}, {var_or_func_decl};
-
-handler_decl = "handler", id, "from", file_name;
-
-library_decl = "library", id, "from", file_name;
+prog = {var_or_func_decl};
 
 var_or_func_decl = var_decl_st | func_decl;
 
@@ -25,6 +21,7 @@ st = expr_st
    | timeline_st
    | download_st
    | updload_st
+   | import_st
    | jump_st;
 
 expr_st = [expr], ";";
@@ -55,6 +52,8 @@ jump_st = ("continue" | "break" | return), ";";
 continue = "continue";
 break = "break";
 return = "return", [expr];
+
+import_st = "import", ["handler"], id, "from", file_name | id;
 
 expr = assign;
 

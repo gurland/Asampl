@@ -41,7 +41,7 @@ enum class lexer_state {
 
 static std::map<std::string, token_type> key_words = {
     {"handler",  token_type::HANDLER},
-    {"library",  token_type::LIBRARY},
+    {"import",  token_type::IMPORT},
     {"from",     token_type::FROM},
     {"if",       token_type::IF},
     {"else",     token_type::ELSE},
@@ -64,7 +64,7 @@ static std::map<std::string, token_type> key_words = {
 
 static std::vector<token_type> delay_types = {
     token_type::HANDLER,
-    token_type::LIBRARY,
+    token_type::IMPORT,
     token_type::FROM,
     token_type::IF,
     token_type::WHILE,
@@ -112,7 +112,8 @@ static std::vector<lexer_state> wrt_states = {
 static int line = 1;
 static lexer_state state = lexer_state::NONE;
 
-static bool point_in_num = false;
+//point in float number or before file extension
+static bool point = false;
 
 static inline char get_next_char(std::string::cit &it);
 static void get_to_next_line(std::string::cit &it);
@@ -143,7 +144,7 @@ static void get_to_next(std::string::cit &it) {
 static void write_to_buf(std::string &buf, char c) {
     switch(state) {
         case lexer_state::STRING:
-            if (!(buf.length() == 1 && buf.back() == '\"'))
+            if (!(buf.length() == 0 && c == '\"'))
                 buf.push_back(c);
             break;
         default:
@@ -155,6 +156,8 @@ static void write_to_buf(std::string &buf, char c) {
 static bool store_buf(token_type ttype) {
     switch(ttype) {
         case token_type::ID:
+        case token_type::STRING:
+        case token_type::NUMBER:
             return true;
         default:
             return false;
@@ -227,8 +230,12 @@ static token_type state_word_handle(const std::string &buf, char c) {
     auto it = key_words.find(buf);
     if (it != key_words.end()) {
         ttype = it->second;
-    } else if (!is_name_part(c)) {
-        ttype = token_type::ID;
+    } else if (!is_name_part(c) && !(c == '.' && !point)) {
+        if (point) {
+            ttype = token_type::FILE_NAME;
+        } else {
+            ttype = token_type::ID;
+        }
     }
     return ttype;
 }
@@ -236,8 +243,8 @@ static token_type state_word_handle(const std::string &buf, char c) {
 static token_type state_num_or_word_handle(const std::string &buf, char c) {
     token_type ttype = token_type::NONE;
     if (!isdigit(c)) {
-        if (!point_in_num && c == '.') {
-            point_in_num = true;
+        if (!point && c == '.') {
+            point = true;
         } else if (is_name_part(c)) {
             state = lexer_state::WORD;
             ttype = state_word_handle(buf, c);
@@ -432,9 +439,13 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
 
         if (ttype != token_type::NONE) {
             if (store_buf(ttype)) {
-                token_sequence.emplace_back(buf, ttype, line);
+                if (ttype == token_type::NUMBER) {
+                    token_sequence.emplace_back(((point) ? std::stod(buf) : std::stoi(buf)), ttype, line);
+                } else {
+                    token_sequence.emplace_back(buf, ttype, line);
+                }
             } else {
-                token_sequence.emplace_back((int)((ttype == token_type::LOGIC && buf == "true") ? 1 : 0), ttype, line);
+                token_sequence.emplace_back((long)((ttype == token_type::LOGIC && buf == "true") ? 1 : 0), ttype, line);
             }
 
             if (contains(delay_types, ttype)) {
@@ -443,7 +454,7 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
 
             state = lexer_state::NONE;
             ttype = token_type::NONE;
-            point_in_num = false;
+            point = false;
             buf.clear();
         }
 
@@ -463,7 +474,7 @@ std::string tt_to_string(token_type type) {
 #define C2S(x) case token_type::x: return #x;
     switch(type) {
         C2S(HANDLER)
-        C2S(LIBRARY)
+        C2S(IMPORT)
         C2S(FROM)
         C2S(IF)
         C2S(ELSE)
@@ -540,6 +551,7 @@ std::string tt_to_string(token_type type) {
         C2S(LEFT_SHIFT)
         C2S(RIGHT_SHIFT)
         C2S(QUESTION_MARK)
+        C2S(FILE_NAME)
 
         C2S(NONE)
     }

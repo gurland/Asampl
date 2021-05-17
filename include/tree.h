@@ -34,7 +34,7 @@ enum class ast_node_type {
 	LAMBDA,
 
 	HANDLER,
-	LIBRARY,
+	IMPORT,
 	FROM,
 	ELSE,
 	TIMELINE,
@@ -105,6 +105,7 @@ enum class ast_node_type {
 	LEFT_SHIFT,
 	RIGHT_SHIFT,
 	QUESTION_MARK,
+	FILE_NAME,
 
 	NONE,
 };
@@ -115,7 +116,7 @@ class ast_node {
 public:
 	ast_node() :
 		type(ast_nt::NONE),
-		value((int)0)
+		value((long)0)
 	{}
 
 	ast_node(ast_nt _type, std::string _value) :
@@ -125,16 +126,21 @@ public:
 
 	ast_node(ast_nt _type) :
 		type(_type),
-		value((int)0)
+		value((long)0)
 	{}
 
-	ast_node(ast_nt _type, int) :
+	ast_node(ast_nt _type, long _val) :
 		type(_type),
-		value((int)0)
+		value(_val)
+	{}
+
+	ast_node(ast_nt _type, double _val) :
+		type(_type),
+		value(_val)
 	{}
 
 	ast_nt type;
-    std::variant<int, std::string> value;
+    std::variant<long, std::string, double> value;
 };
 
 class as_tree;
