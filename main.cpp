@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	tree->print(std::cout);
+	//tree->print(std::cout);
 
     Asampl::Interpreter::Program program;
     program.add_handlers_directory(file_name.parent_path());

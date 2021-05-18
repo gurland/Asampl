@@ -36,16 +36,16 @@ Image from_mat(const cv::Mat& mat) {
     return Image{ static_cast<size_t>(mat.cols), static_cast<size_t>(mat.rows), std::move(data) };
 }
 
-cv::Size to_size(const Tuple& tuple) {
-    return {tuple[0]->get<Number>().as_int(), tuple[1]->get<Number>().as_int()};
+cv::Size to_size(Map& map) {
+    return {map.strict_get("x")->get<Number>().as_int(), map.strict_get("y")->get<Number>().as_int()};
 }
 
-cv::Point_<int> to_pos(const Tuple& tuple) {
-    return {tuple[0]->get<Number>().as_int(), tuple[1]->get<Number>().as_int()};
+cv::Point_<int> to_pos(Map& map) {
+    return {map.strict_get("x")->get<Number>().as_int(), map.strict_get("y")->get<Number>().as_int()};
 }
 
-cv::Scalar to_color(const Tuple& tuple) {
-    return cv::Scalar(tuple[0]->get<Number>().value, tuple[1]->get<Number>().value, tuple[2]->get<Number>().value, CV_8UC3);
+cv::Scalar to_color(Map& map) {
+    return cv::Scalar(map.strict_get("r")->get<Number>().value, map.strict_get("g")->get<Number>().value, map.strict_get("b")->get<Number>().value, CV_8UC3);
 }
 
 }
@@ -73,8 +73,9 @@ void show_image(Image& image) {
     cv::waitKey(43);
 }
 
-void overlay_image(Image& background, Image& image, const Tuple& pos_) {
+void i_overlay(Image& background, Image& image, Map& pos_) {
     auto pos = to_pos(pos_);
+    std::cout << pos << std::endl;
     cv::Rect target_rect{pos.x, pos.y, static_cast<int>(image.width), static_cast<int>(image.height)};
 
     auto bg = as_mat(background);
@@ -114,7 +115,7 @@ Image load_image(const String& path)
     return from_mat(rgb);
 }
 
-Image scale_image(Image& image, const Tuple& size, ArgsRest rest) {
+Image scale_image(Image& image, Map& size, ArgsRest rest) {
     cv::InterpolationFlags inter = cv::INTER_LINEAR;
     if (rest.tuple.values.size() > 1) {
         const std::string& inter_str = rest.tuple[0]->get<String>().value;
@@ -132,7 +133,7 @@ Image scale_image(Image& image, const Tuple& size, ArgsRest rest) {
     return from_mat(result);
 }
 
-Image make_image_rect(const Tuple& size, const Tuple& color)
+Image i_solid_color(Map& color, Map& size)
 {
     const auto cv_size = to_size(size);
     cv::Mat image(cv_size, CV_8UC3, to_color(color));
@@ -279,9 +280,9 @@ std::vector<Function> get_stdlib_functions() {
         MAKE_ASAMPL_FUNCTION(random_image),
         MAKE_ASAMPL_FUNCTION(load_image),
         MAKE_ASAMPL_FUNCTION(show_image),
-        MAKE_ASAMPL_FUNCTION(overlay_image),
+        MAKE_ASAMPL_FUNCTION(i_overlay),
         MAKE_ASAMPL_FUNCTION(scale_image),
-        MAKE_ASAMPL_FUNCTION(make_image_rect),
+        MAKE_ASAMPL_FUNCTION(i_solid_color),
         MAKE_ASAMPL_FUNCTION(i_width),
         MAKE_ASAMPL_FUNCTION(i_height),
         MAKE_ASAMPL_FUNCTION(t_map),

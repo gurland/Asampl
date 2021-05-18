@@ -231,19 +231,19 @@ ValuePtr Program::evaluate(const as_tree& tree, const std::shared_ptr<VarScope>&
         }
         case ast_node_type::MORE: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, >)};
+            return Bool{BINARY(Number, <)};
         }
         case ast_node_type::LESS: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, <)};
+            return Bool{BINARY(Number, >)};
         }
         case ast_node_type::MORE_EQUAL: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, >=)};
+            return Bool{BINARY(Number, <=)};
         }
         case ast_node_type::LESS_EQUAL: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, <=)};
+            return Bool{BINARY(Number, >=)};
         }
         case ast_node_type::LOG_AND: {
             BINARY_EXPR;

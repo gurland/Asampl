@@ -31,11 +31,11 @@ Timeline::Timeline(Map& params, Function& callback)
     , callback{callback}
 
 {
-    if (params.has("start")) {
-        start = params.get("start")->get<Number>().value;
+    if (params.has("from")) {
+        start = params.get("from")->get<Number>().value;
     }
-    if (params.has("end")) {
-        end = params.get("end")->get<Number>().value;
+    if (params.has("to")) {
+        end = params.get("to")->get<Number>().value;
     }
 
     for (const auto& handler_params_ptr : params.strict_get("downloads")->get<Tuple>().values) {
@@ -75,6 +75,7 @@ bool Timeline::iteration() {
     args.reserve(downloads_data.size());
 
     bool result = false;
+    bool all_current_valid = true;
     for (auto& [dwnld, dwnld_data] : downloads_data) {
         auto &cur_frame = dwnld_data.cur_frame;
         auto &next_frame = dwnld_data.next_frame;
@@ -82,10 +83,12 @@ bool Timeline::iteration() {
         ValuePtr value = Undefined{};
 
         if (cur_frame.is_valid()) {
+            value = cur_frame.value;
             if (cur_frame.timestamp <= cur_time) {
-                value = cur_frame.value;
                 cur_frame = Handler::DownloadResponse::new_not_ready();
             }
+        } else {
+            all_current_valid = false;
         }
         if (next_frame.is_valid() && (!cur_frame.is_valid() || next_frame.timestamp <= cur_time)) {
             cur_frame = dwnld_data.next_frame;
@@ -102,7 +105,9 @@ bool Timeline::iteration() {
         args.push_back(std::move(value));
     }
 
-    callback.func(args);
+    if (all_current_valid) {
+        callback.func(args);
+    }
 
     return result;
 }
