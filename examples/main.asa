@@ -15,10 +15,10 @@ fn main() {
         var2 : 1,
         "b" : 2
     };
-    import lib from lib-file;
-    import lib from lib-file.asa;
+    import lib from "lib-file";
+    import lib from "lib-file.asa";
     let context = init_context(source="", header=string);
-    import handler string from string-stream-handler;
+    import handler string from "string-stream-handler";
     let func_var = func;
     func_var();
 

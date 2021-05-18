@@ -1,6 +1,6 @@
-prog = {var_or_func_decl};
+prog = {top_decl};
 
-var_or_func_decl = var_decl_st | func_decl;
+var_or_func_decl = var_decl_st | func_decl | import_st;
 
 var_decl_st = "let", id, ["=", expr], ";";
 
@@ -53,7 +53,7 @@ continue = "continue";
 break = "break";
 return = "return", [expr];
 
-import_st = "import", ["handler"], id, "from", file_name | id;
+import_st = "import", ["handler"], id, "from", string;
 
 expr = assign;
 

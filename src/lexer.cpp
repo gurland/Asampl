@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #define is_name_part(c) \
-    (isalpha((c)) || c == '_' || c == '-' || isdigit((c)))
+    (isalpha((c)) || c == '_' || isdigit((c)))
 
 #define contains(container, val) \
     (std::find((container).begin(), (container).end(), (val)) != (container).end())
@@ -14,11 +14,10 @@
 #define is_garbage(c) ((int)(c) < 33)
 
 enum class lexer_state {
-	NONE,
-	WORD,
-    NUM_OR_WORD,
-	STRING,
-	// COMMENT_OR_ASSIGN,
+    NONE,
+    WORD,
+    NUM,
+    STRING,
 
     // START_OPERATOR,
     DIV_OPERATOR,
@@ -41,7 +40,7 @@ enum class lexer_state {
 
 static std::map<std::string, token_type> key_words = {
     {"handler",  token_type::HANDLER},
-    {"import",  token_type::IMPORT},
+    {"import",   token_type::IMPORT},
     {"from",     token_type::FROM},
     {"if",       token_type::IF},
     {"else",     token_type::ELSE},
@@ -50,7 +49,7 @@ static std::map<std::string, token_type> key_words = {
     {"def",      token_type::DEF_CASE},
     {"timeline", token_type::TIMELINE},
     {"download", token_type::DOWNLOAD},
-    {"upload",  token_type::UPLOAD},
+    {"upload",   token_type::UPLOAD},
     {"to",       token_type::TO},
     {"fn",       token_type::FN},
     {"let",      token_type::LET},
@@ -104,7 +103,7 @@ static std::vector<token_type> delay_types = {
 static std::vector<lexer_state> wrt_states = {
     lexer_state::WORD,
 	lexer_state::STRING,
-	lexer_state::NUM_OR_WORD,
+	lexer_state::NUM,
 };
 
 #define cit const_iterator
@@ -126,15 +125,17 @@ static inline char get_next_char(std::string::cit &it) {
 
 static void get_to_next_line(std::string::cit &it) {
     ++line;
-    while(get_next_char(it) != '\n') {}
+    if (*it != '\n')
+        while(get_next_char(it) != '\n') {}
     get_next_char(it);
 }
 
 static void get_to_next_nospace(std::string::cit &it) {
-    char c = 0;
-    while(c = get_next_char(it), isspace(c) || c == '\n')
+    char c = *it;
+    do {
         if (c == '\n')
             ++line;
+    } while(c = get_next_char(it), isspace(c) || c == '\n');
 }
 
 static void get_to_next(std::string::cit &it) {
@@ -169,7 +170,7 @@ static void file_promotion(std::string::cit &it) {
     switch(state) {
         case lexer_state::STRING:
         case lexer_state::WORD:
-        case lexer_state::NUM_OR_WORD:
+        case lexer_state::NUM:
             get_to_next(it);
             break;
         default:
@@ -207,7 +208,7 @@ static token_type state_none_handle(const std::string &buf, char c) {
         _SIMPLE_CASE('!', state, lexer_state::NOT_OPERATOR)
         default: {
             if (isdigit(c)) {
-                state = lexer_state::NUM_OR_WORD;
+                state = lexer_state::NUM;
             } else if (is_name_part(c)) {
                 state = lexer_state::WORD;
             }
@@ -231,24 +232,17 @@ static token_type state_word_handle(const std::string &buf, char c) {
     auto it = key_words.find(buf);
     if (it != key_words.end()) {
         ttype = it->second;
-    } else if (!is_name_part(c) && !(c == '.' && !point)) {
-        if (point) {
-            ttype = token_type::FILE_NAME;
-        } else {
-            ttype = token_type::ID;
-        }
+    } else if (!is_name_part(c)) {
+        ttype = token_type::ID;
     }
     return ttype;
 }
 
-static token_type state_num_or_word_handle(const std::string &buf, char c) {
+static token_type state_num_handle(const std::string &buf, char c) {
     token_type ttype = token_type::NONE;
     if (!isdigit(c)) {
         if (!point && c == '.') {
             point = true;
-        } else if (is_name_part(c)) {
-            state = lexer_state::WORD;
-            ttype = state_word_handle(buf, c);
         } else {
             ttype = token_type::NUMBER;
         }
@@ -419,7 +413,7 @@ int split_tokens(std::fstream &file, std::vector<token> &token_sequence) {
             _SIMPLE_CASE(lexer_state::NONE, ttype, state_none_handle(buf, *it))
             _SIMPLE_CASE(lexer_state::STRING, ttype, state_string_handle(buf, *it))
             _SIMPLE_CASE(lexer_state::WORD, ttype, state_word_handle(buf, *it))
-            _SIMPLE_CASE(lexer_state::NUM_OR_WORD, ttype, state_num_or_word_handle(buf, *it))
+            _SIMPLE_CASE(lexer_state::NUM, ttype, state_num_handle(buf, *it))
 
             _SIMPLE_CASE(lexer_state::DIV_OPERATOR, ttype, state_div_operator_handler(it))
             _SIMPLE_CASE(lexer_state::PLUS_OPERATOR, ttype, state_plus_operator_handler(*it))
