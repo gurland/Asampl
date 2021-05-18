@@ -1,167 +1,123 @@
-#pragma once
+#ifndef _LEXER_H
+#define _LEXER_H
 
 #include <string>
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <variant>
 
-#define IS_NAME_START(c) (isalpha( (c) ) || (c) == '_')
-#define IS_NAME(c) ( IS_NAME_START( c ) || isdigit(c) )
-#define IS_STRING_LITERAL_START(c) ((c) == '\'' || (c) == '\"')
+enum class token_type {
+    HANDLER,
+    IMPORT,
+    FROM,
+    IF,
+    ELSE,
+    WHILE,
+    MATCH,
+    DEF_CASE,
+    TIMELINE,
+    DOWNLOAD,
+    UPLOAD,
+    TO,
+    FN,
+    LET,
+    LOGIC,
+    WITH,
+    CONTINUE,
+    BREAK,
+    RETURN,
 
-namespace Lexer {
-	enum class TokenType {
-		//Base_Symbols
-		INTEGER,
-		REAL,
+    NOT,
+    BIN_NOT,
 
-		NUMBER,
+    ID,
+    STRING,
+    NUMBER,
 
-		STRING_LITERAL,
-		NAME,
+    SEMICOLON,
+    LEFT_BRACE,
+    RIGHT_BRACE,
+    LEFT_SQUARE_BRACKET,
+    RIGHT_SQUARE_BRACKET,
+    COMMA,
+    DOT,
+    COLON,
+    LEFT_BRACKET,
+    RIGHT_BRACKET,
+    EQUAL,
+    NOT_EQUAL,
+    LESS_EQUAL,
+    MORE_EQUAL,
 
-		//True/False
-		LOGIC, //BOOLEAN
+    DIV_ASSIGNMENT,
+    PLUS_ASSIGNMENT,
+    MINUS_ASSIGNMENT,
+    MULT_ASSIGNMENT,
+    MDIV_ASSIGNMENT,
+    LEFT_SHIFT_ASSIGNMENT,
+    RIGHT_SHIFT_ASSIGNMENT,
+    BIN_AND_ASSIGNMENT,
+    BIN_OR_ASSIGNMENT,
+    BIN_NOR_ASSIGNMENT,
 
-		//Math_Operators
-		PLUS,
-		MINUS,
-		MULT,
-		DIV,
+    DIV,
+    PLUS,
+    MINUS,
+    MULT,
+    MDIV,
+    LESS,
+    MORE,
+    BIN_AND,
+    BIN_OR,
+    PIPE = BIN_OR,
+    BIN_NOR,
+    LOG_AND,
+    LOG_OR,
+    INCREM,
+    DECREM,
 
-		MOD, //May be
+    ARROW,
+    LEFT_SHIFT_OPERATOR,
+    RIGHT_SHIFT_OPERATOR,
 
-		CARET,
+    LEFT_SHIFT,
+    RIGHT_SHIFT,
+    QUESTION_MARK,
+    ASSIGNMENT,
+    FILE_NAME,
 
-		//Logical_Operators
-		AND,
-		OR,
-		NOT,
-		XOR,
+    NONE,
+};
 
-		EQUAL,
-		NOTEQUAL,
-
-		MORE,
-		LESS,
-
-		LESS_OR_EQUAL,
-		MORE_OR_EQUAL,
-
-		//Assign
-		ASSIGN, //("=" or "IS")
-
-		//Symbols
-		POINT,
-		COMMA,
-		SEMICOLON,
-		COLON,
-		QUESTION_MARK,
-		EXCLAMATION_MARK,
-
-		LEFT_BRACKET,//"("
-		RIGHT_BRACKET,//")"
-		LEFT_BRACE, //"{"
-		RIGHT_BRACE,//"}"
-		LEFT_SQUARE_BRACKET,//"["
-		RIGHT_SQUARE_BRACKET,//"]"
-
-		APOSTROPHE,
-		QUOTES, // "
-		SLASH, // "/"
-		BACKSLASH, // "\"
-		NUMBER_SIGN, // "#"
-		SOBAKA, //"@"
-
-		AMPERSAND,
-		VERTICAL_BAR,
-
-		//Program key words
-		PROGRAM,
-		LIBRARIES,
-		HANDLERS,
-		RENDERERS,
-		SOURCES,
-		SETS,
-		ELEMENTS,
-		TUPLES,
-		AGGREGATES,
-		ACTIONS,
-
-		//Special key words for
-
-		//Timeline operator
-		TIMELINE,
-		AS,
-		UNTIL,
-		//Sequence handler operator
-		SEQUENCE,
-
-		//IF/Case/while
-		IF,
-		THEN,
-		ELSE,
-		SWITCH,
-		DEFAULT,
-		CASE,
-		OF,
-		WHILE,
-
-		//SUBSTITUTE operator
-		SUBSTITUTE,
-		FOR,
-		WHEN,
-
-		//Download/Render operator
-		DOWNLOAD,
-		FROM,
-		WITH,
-		UPLOAD,
-		TO,
-
-		RENDER,
-		PRINT,
-		//TokenType_WITH,
-
-		COMMENT,
-
-		NOTHING,
-	};
+#define _SIMPLE_CASE(match_val, var, val)       \
+    case match_val:                             \
+        var = val;                              \
+        break;                                  \
 
 
-	class Token
-	{
-		std::string	buffer_;
-		TokenType type_;
-		int line_;
+#include "vt.h"
+using tvt = vt;
 
-	public:
-		Token() : type_(TokenType::NOTHING)
-		{}
+class token {
+public:
+    token() : type(token_type::NONE) {}
+    token(const std::string &_buffer, token_type _type, int _line) :
+        buffer(_buffer), type(_type), line(_line) {}
 
-		Token(std::string buffer, TokenType type, int position_in_file) :
-			buffer_(buffer), type_(type), line_(position_in_file)
-		{}
+    token(long _val, token_type _type, int _line) :
+        buffer(_val), type(_type), line(_line) {}
 
+    token(double _val, token_type _type, int _line) :
+        buffer(_val), type(_type), line(_line) {}
 
-		std::string get_buffer() const { return buffer_; }
-		TokenType get_type() const { return type_; }
-		int get_line() { return line_; }
+    std::variant<long, std::string, double> buffer;
+    token_type type;
+    int line;
+};
 
-		void set_buffer(std::string buffer) { buffer_ = buffer; }
-		void set_type(TokenType type) { type_ = type; }
-		void set_line(int line) { line_ = line; }
-
-	};
+int split_tokens(std::fstream &fs, std::vector<token> &token_sequence);
+std::string tt_to_string(token_type type);
 
 
-
-	//Main function
-	int split_tokens(std::fstream &fs, std::vector<Token> &token_sequence);
-
-	//Print all
-	void token_print(std::vector<Token> &token_sequence);
-
-	std::string to_string(TokenType type);
-
-}
+#endif /* _LEXER_H */

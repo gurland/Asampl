@@ -1,0 +1,58 @@
+
+
+//- render
+
+fn func(s2, d4) {
+
+}
+
+fn main() {
+    let source = "data/r.txt";
+    let var2 = {};
+    let var4 = 123;
+    let var45 = 123.123;
+    let var3 = {
+        var2 : 1,
+        "b" : 2
+    };
+    import lib from lib-file;
+    import lib from lib-file.asa;
+    let context = init_context(source="", header=string);
+    import handler string from string-stream-handler;
+    let func_var = func;
+    func_var();
+
+    let func_var = |v1, v2| {
+
+    };
+
+    let arr = [1, "ad", 1];
+    let arr2 = [];
+    let vv = (arr[2] == 4) ? arr[2] : 4;
+    arr.fg.add(source);
+    arr.add(arr2);
+
+    {
+        let var2;
+    }
+
+    let map = {
+        source1: h1,
+        source2: h2
+    };
+
+    timeline {
+        source1: h1,
+        source2: h2
+    } func;
+
+    timeline map func;
+
+    timeline {
+        context1: 1,
+        context2: 5
+    } |v1, v2| {
+        upload v1 to source1 with h1;
+    };
+    upload v1 to source1 with h1;
+}
