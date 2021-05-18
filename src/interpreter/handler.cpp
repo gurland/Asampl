@@ -1,6 +1,8 @@
 #include "interpreter/handler.h"
 #include "interpreter/exception.h"
 
+#include <iostream>
+
 #include "handler/ffi.cpp"
 #ifdef ASAMPL_ENABLE_PYTHON
 #include "handler/python.cpp"
@@ -16,6 +18,9 @@ ActiveDownload::ActiveDownload(const std::filesystem::path& filename, IHandler& 
     }
 
     context = handler.open_download();
+    if (context == nullptr) {
+        throw InterpreterException("Coult not open handler");
+    }
 }
 
 bool ActiveDownload::fill_data() {

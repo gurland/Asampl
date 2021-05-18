@@ -1,10 +1,10 @@
 #pragma once
 
-#include <unordered_map>
+#include <map>
 #include <vector>
-#include <stdbool.h>
 #include <optional>
 
+#include "interpreter/value.h"
 #include "interpreter/handler.h"
 
 namespace Asampl::Interpreter {
@@ -16,27 +16,28 @@ class Program;
 namespace Asampl::Interpreter::Timeline {
 
 struct DwnldData {
-    std::string var_id;
     Handler::DownloadResponse cur_frame;
     Handler::DownloadResponse next_frame;
 };
 
 class Timeline {
 public:
-    Timeline(Program *program);
+    Timeline(Map& params, Function& callback);
     Timeline(const Timeline&) = delete;
     Timeline(Timeline&&) = delete;
 
-    void add_download(Handler::ActiveDownload *dwnld, const std::string &var_id);
-
-    bool prepare_iteration();
+    void run();
+    bool iteration();
 
     std::optional<double> start;
     std::optional<double> end;
 private:
-    Program *program_;
-private:
-    std::unordered_map<Handler::ActiveDownload*, DwnldData> downloads_data_;
+    Map& params;
+    Function& callback;
+
+    std::vector<std::unique_ptr<Handler::ActiveDownload>> active_downloads;
+    std::map<Handler::ActiveDownload*, DwnldData> downloads_data;
+
 
     double cur_time = 0;
 };

@@ -87,6 +87,8 @@ struct ActiveDownload {
     std::unique_ptr<IHandlerContextDownload> context;
 
     ActiveDownload(const std::filesystem::path& filename, IHandler& handler);
+    ActiveDownload(const ActiveDownload&) = delete;
+    ActiveDownload(ActiveDownload&&) = delete;
 
     bool fill_data();
     DownloadResponse download();

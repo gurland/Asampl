@@ -2,6 +2,7 @@
 
 #include "interpreter.h"
 #include "interpreter/test_stdlib.h"
+#include "utils.h"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
@@ -105,10 +106,6 @@ void overlay_image(Image& background, Image& image, const Tuple& pos_) {
     img(source_rect).copyTo(bg(target_rect));
 }
 
-Tuple tuple(ArgsRest rest) {
-    return rest.tuple;
-}
-
 Image load_image(const String& path)
 {
     auto bgr = cv::imread(path.value);
@@ -171,20 +168,41 @@ Undefined undefined() {
     //cv::multiply(mat, channel_scale, mat);
 //}
 
-Bool string_contains(const String& s, const String& sample) {
+Bool s_contains(const String& s, const String& sample) {
     return Bool{s.value.find(sample.value) != std::string::npos};
 }
 
-String string_concat(const String& a, const String& b) {
-    return String{a.value + b.value};
+String s_concat(ArgsRest args) {
+    String result{""};
+
+    for (const auto& arg : args.tuple.values) {
+        result.value += arg->get<String>().value;
+    }
+
+    return result;
 }
 
-Number width(const Image& img) {
+Number i_width(const Image& img) {
     return Number{img.width};
 }
 
-Number height(const Image& img) {
+Number i_height(const Image& img) {
     return Number{img.height};
+}
+
+Number t_len(const Tuple& t) {
+    return Number{t.values.size()};
+}
+
+Tuple t_map(Tuple& in, Function& f) {
+    Tuple result;
+    result.values.reserve(in.values.size());
+
+    for (auto& value : in.values) {
+        result.values.push_back(f.func(Asampl::Utils::Slice{&value, 1}));
+    }
+
+    return result;
 }
 
 //std::vector<ValuePtr> array() {
@@ -253,37 +271,21 @@ namespace Asampl::Interpreter {
 
 std::vector<Function> get_stdlib_functions() {
     return {
-        //std::make_pair("random_image", make_asampl_function(random_image)),
-        //std::make_pair("show_image", make_asampl_function(show_image)),
         MAKE_ASAMPL_FUNCTION(dbg),
         MAKE_ASAMPL_FUNCTION(is_undefined),
         MAKE_ASAMPL_FUNCTION(undefined),
-        MAKE_ASAMPL_FUNCTION(string_contains),
-        MAKE_ASAMPL_FUNCTION(string_concat),
+        MAKE_ASAMPL_FUNCTION(s_contains),
+        MAKE_ASAMPL_FUNCTION(s_concat),
         MAKE_ASAMPL_FUNCTION(random_image),
         MAKE_ASAMPL_FUNCTION(load_image),
         MAKE_ASAMPL_FUNCTION(show_image),
         MAKE_ASAMPL_FUNCTION(overlay_image),
         MAKE_ASAMPL_FUNCTION(scale_image),
         MAKE_ASAMPL_FUNCTION(make_image_rect),
-        MAKE_ASAMPL_FUNCTION(width),
-        MAKE_ASAMPL_FUNCTION(height),
-        MAKE_ASAMPL_FUNCTION(tuple),
-        //std::make_pair("change_color_channel", make_asampl_function(change_color_channel)),
-        //std::make_pair("change_color", make_asampl_function(change_color)),
-        //std::make_pair("string_contains", make_asampl_function(string_contains)),
-        //std::make_pair("width", make_asampl_function(width)),
-        //std::make_pair("height", make_asampl_function(height)),
-        //std::make_pair("overlay_image", make_asampl_function(overlay_image)),
-        //std::make_pair("load_image", make_asampl_function(load_image)),
-        //std::make_pair("array", make_asampl_function(array)),
-        //std::make_pair("array_push", make_asampl_function(array_push)),
-        //std::make_pair("array_pop", make_asampl_function(array_pop)),
-        //std::make_pair("array_get", make_asampl_function(array_get)),
-        //std::make_pair("array_set", make_asampl_function(array_set)),
-        //std::make_pair("array_size", make_asampl_function(array_size)),
-        //std::make_pair("array_slice", make_asampl_function(array_slice)),
-        //std::make_pair("array_concat", make_asampl_function(array_concat)),
+        MAKE_ASAMPL_FUNCTION(i_width),
+        MAKE_ASAMPL_FUNCTION(i_height),
+        MAKE_ASAMPL_FUNCTION(t_map),
+        MAKE_ASAMPL_FUNCTION(t_len),
     };
 }
 

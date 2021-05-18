@@ -1,0 +1,39 @@
+import handler ffmpeg from ffmpeg-handler
+import handler string_stream from string-stream-handler
+
+fn main() {
+    let tastes = [ "sweet", "sour", "salty", "bitter", "umami" ];
+    dbg(tastes);
+    let images = t_map(tastes, |name| { s_concat("data/", name, ".png"); });
+    dbg(images);
+    images = t_map(images, load_image);
+    dbg(images);
+
+    timeline {
+        "from": 0,
+        "to": 20,
+        "downloads": [
+            {
+                "handler": ffmpeg,
+                "source": "data/test.ogv"
+            },
+            {
+                "handler": string_stream,
+                "source": "data/taste.txt"
+            }
+        ]
+    } |img, taste_value| {
+        dbg(["Hello", img, taste_value]);
+        let offset = 0;
+        let i = 0;
+        while (i < t_len(tastes)) {
+            if (s_contains(taste_value, tastes[i])) {
+                i_overlay(img, images[i], { "x": 0, "y": offset });
+                offset = offset + i_height(images[i]);
+            }
+            i = i + 1;
+        }
+
+        show_image(img);
+    };
+}

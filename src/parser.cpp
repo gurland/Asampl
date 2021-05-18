@@ -89,7 +89,7 @@ static as_tree *ebnf_select(parser *p, const std::vector<grammar_rule> &rules);
 static void append_arg_list(parser *p, as_tree *parent_node);
 
 static as_tree *prog(parser *p);
-static as_tree *var_or_func_decl(parser *p);
+static as_tree *var_or_func_decl_or_import(parser *p);
 static as_tree *var_decl_st(parser *p);
 static as_tree *arr(parser *p);
 static as_tree *expr(parser *p);
@@ -192,7 +192,7 @@ void release_tree(as_tree *tree) {
 
 static as_tree *prog(parser *p) {
     as_tree *prog_node = new as_tree(new ast_node(ast_nt::PROGRAM));
-    ebnf_multiple(p, prog_node, var_or_func_decl);
+    ebnf_multiple(p, prog_node, var_or_func_decl_or_import);
     return prog_node;
 }
 
@@ -340,8 +340,8 @@ static as_tree *import_st(parser *p) {
     return main_node;
 }
 
-static as_tree *var_or_func_decl(parser *p) {
-    return ebnf_select(p, {var_decl_st, func_decl});
+static as_tree *var_or_func_decl_or_import(parser *p) {
+    return ebnf_select(p, {var_decl_st, func_decl, import_st});
 }
 
 static as_tree *var_decl_st(parser *p) {

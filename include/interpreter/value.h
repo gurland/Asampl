@@ -13,11 +13,32 @@
 
 namespace Asampl::Interpreter {
 
+namespace Handler {
+
+class IHandler;
+
+}
+
+struct Undefined {
+    std::string to_string() const {
+        return "UNDEFINED";
+    }
+
+    Undefined clone() const {
+        return Undefined{};
+    }
+
+    bool operator==(const Undefined&) const {
+        return true;
+    }
+};
+
 struct Value;
 struct ValuePtr {
     std::shared_ptr<Value> ptr;
 
     //ValuePtr(ValuePtr&&) = default;
+    ValuePtr() : ValuePtr{Undefined{}} {};
     ValuePtr(const ValuePtr&) = default;
     ValuePtr(std::nullptr_t) : ptr{nullptr} {}
     ValuePtr(Value&& value)
@@ -80,20 +101,6 @@ template<> struct hash<Asampl::Interpreter::ValuePtr> {
 namespace Asampl::Interpreter {
 
 using Byte = uint8_t;
-
-struct Undefined {
-    std::string to_string() const {
-        return "UNDEFINED";
-    }
-
-    Undefined clone() const {
-        return Undefined{};
-    }
-
-    bool operator==(const Undefined&) const {
-        return true;
-    }
-};
 
 struct Number {
     double value;
@@ -229,9 +236,24 @@ struct Tuple {
 };
 
 struct Map {
-    std::unordered_map<ValuePtr, ValuePtr> map;
+    std::unordered_map<std::string, ValuePtr> string_map;
 
     std::string to_string() const;
+
+    // TODO
+    void set(const ValuePtr& key, const ValuePtr& value);
+    ValuePtr& get(const ValuePtr& key);
+    bool has(const ValuePtr& key);
+
+    void set(const std::string& key, const ValuePtr& value);
+    ValuePtr& get(const std::string& key);
+    bool has(const std::string& key);
+
+    void set(const char* key, const ValuePtr& value);
+    ValuePtr& get(const char* key);
+    bool has(const char* key);
+
+    ValuePtr& strict_get(const std::string& key);
 
     Map clone() const {
         return *this;
@@ -273,6 +295,23 @@ struct Function {
     }
 };
 
+struct HandlerValue {
+    std::string name;
+    std::shared_ptr<Handler::IHandler> handler_ptr;
+
+    std::string to_string() const {
+        return "<handler " + name + ">";
+    }
+
+    HandlerValue clone() const {
+        return *this;
+    }
+
+    bool operator==(const HandlerValue& other) const {
+        assert(false && "handler comparison not implemented");
+    }
+};
+
 template< typename T >
 struct ValueVisitor {
 public:
@@ -287,6 +326,7 @@ public:
     virtual Result operator()(ByteArray&) = 0;
     virtual Result operator()(Map&) = 0;
     virtual Result operator()(Function&) = 0;
+    virtual Result operator()(HandlerValue&) = 0;
 };
 
 struct Value {
@@ -299,7 +339,8 @@ struct Value {
         Tuple,
         ByteArray,
         Map,
-        Function
+        Function,
+        HandlerValue
         >;
 
     VariantType variant;

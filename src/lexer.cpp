@@ -158,6 +158,7 @@ static bool store_buf(token_type ttype) {
         case token_type::ID:
         case token_type::STRING:
         case token_type::NUMBER:
+        case token_type::LOGIC:
             return true;
         default:
             return false;

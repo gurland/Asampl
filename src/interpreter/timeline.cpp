@@ -25,63 +25,85 @@
 namespace Asampl::Interpreter::Timeline {
 
 using namespace Handler;
-namespace std = ::std;
 
-Timeline::Timeline(Program *program) :
-    program_(program)
+Timeline::Timeline(Map& params, Function& callback)
+    : params{params}
+    , callback{callback}
+
 {
+    if (params.has("start")) {
+        start = params.get("start")->get<Number>().value;
+    }
+    if (params.has("end")) {
+        end = params.get("end")->get<Number>().value;
+    }
+
+    for (const auto& handler_params_ptr : params.strict_get("downloads")->get<Tuple>().values) {
+        auto& handler_params = handler_params_ptr->get<Map>();
+        const auto& handler = handler_params.strict_get("handler")->get<HandlerValue>().handler_ptr;
+        const auto& source = handler_params.strict_get("source")->get<String>().value;
+
+        active_downloads.emplace_back(std::make_unique<ActiveDownload>(source, *handler));
+
+        Handler::ActiveDownload* dwnld = active_downloads.back().get();
+        DwnldData ddata{
+            .cur_frame = DOWNLOAD_FIRST_FRAME(dwnld, start.value_or(0)),
+            .next_frame = dwnld->download()
+        };
+        downloads_data.insert(std::make_pair(dwnld, std::move(ddata)));
+    }
 }
 
-void Timeline::add_download(ActiveDownload *dwnld, const std::string &var_id) {
-    if (!dwnld)
-        InterpreterException("Empty download");
-
-    DwnldData ddata{
-        .var_id = var_id,
-        .cur_frame = DOWNLOAD_FIRST_FRAME(dwnld, start.value_or(0)),
-        .next_frame = dwnld->download()
-    };
-    downloads_data_.emplace(dwnld, ddata);
+void Timeline::run() {
+    while (iteration()) {}
 }
 
-bool Timeline::prepare_iteration() {
+bool Timeline::iteration() {
     cur_time = std::numeric_limits<float>::max();
-    for (auto &dwnld_data : downloads_data_) {
+    for (auto &dwnld_data : downloads_data) {
         auto &cur_frame = dwnld_data.second.cur_frame;
         if (cur_frame.is_valid() && cur_frame.timestamp < cur_time) {
             cur_time = cur_frame.timestamp;
         }
     }
+    
+    if (cur_time > end.value_or(std::numeric_limits<float>::max())) {
+        return false;
+    }
+
+    std::vector<ValuePtr> args;
+    args.reserve(downloads_data.size());
 
     bool result = false;
-    for (auto &dwnld_data : downloads_data_) {
-        auto dwnld = dwnld_data.first;
-        auto &cur_frame = dwnld_data.second.cur_frame;
-        auto &next_frame = dwnld_data.second.next_frame;
-        auto &var_id = dwnld_data.second.var_id;
+    for (auto& [dwnld, dwnld_data] : downloads_data) {
+        auto &cur_frame = dwnld_data.cur_frame;
+        auto &next_frame = dwnld_data.next_frame;
 
-        auto variable_it = program_->variables_.find(var_id);
-        if (variable_it == program_->variables_.end()) {
-            throw InterpreterException("Variable with id '" + var_id + "' does not exist");
-        }
+        ValuePtr value = Undefined{};
+
         if (cur_frame.is_valid()) {
             if (cur_frame.timestamp <= cur_time) {
-                variable_it->second = cur_frame.value;
+                value = cur_frame.value;
                 cur_frame = Handler::DownloadResponse::new_not_ready();
             }
         }
         if (next_frame.is_valid() && (!cur_frame.is_valid() || next_frame.timestamp <= cur_time)) {
-            cur_frame = dwnld_data.second.next_frame;
+            cur_frame = dwnld_data.next_frame;
             auto tmp = dwnld->download();
             if (tmp.is_valid() && (!end || tmp.timestamp <= end))
-                dwnld_data.second.next_frame = tmp;
+                dwnld_data.next_frame = tmp;
             else
-                dwnld_data.second.next_frame = DownloadResponse::new_not_ready();
+                dwnld_data.next_frame = DownloadResponse::new_not_ready();
         }
         if (cur_frame.is_valid() || next_frame.is_valid()) {
             result = true;
         }
+
+        args.push_back(std::move(value));
     }
+
+    callback.func(args);
+
     return result;
 }
 

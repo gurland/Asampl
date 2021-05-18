@@ -26,22 +26,21 @@ public:
         py::exec_file(path.c_str(), ns);
     }
 
-    virtual std::vector<Function> get_functions() override {
-        std::vector<Function> functions;
+    virtual ValuePtr get_value() override {
+        Map functions;
 
         auto keys = ns.keys();
         const auto len = py::len(keys);
-        functions.reserve(len);
 
         for (std::size_t i = 0; i < len; i++) {
             auto key = py::extract<std::string>(keys[i])();
             if (key.find("asampl_") == 0) {
                 const std::string function_name = key.substr(strlen("asampl_"));
-                functions.emplace_back(Function{ function_name, std::bind(python_function_call, ns[key], std::placeholders::_1) });
+                functions.set(function_name, Function{ function_name, std::bind(python_function_call, ns[key], std::placeholders::_1) });
             }
         }
 
-        return functions;
+        return std::move(functions);
     }
 
 private:

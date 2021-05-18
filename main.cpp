@@ -11,7 +11,7 @@
 
 #include "lexer.h"
 #include "parser.h"
-// #include "interpreter.h"
+ #include "interpreter.h"
 
 int main(int argc, char *argv[])
 {
@@ -19,17 +19,17 @@ int main(int argc, char *argv[])
 		std::cerr << "Error, no input file specified\n";
 		return 0;
 	}
-	const char *file_name = argv[1];
+    std::filesystem::path file_name = argv[1];
 
-    // std::filesystem::path handlers_directory;
-    // if (argc >= 3) {
-    //     handlers_directory = argv[2];
-    // }
+     std::filesystem::path handlers_directory;
+     if (argc >= 3) {
+         handlers_directory = argv[2];
+     }
 
-    // std::filesystem::path libraries_directory;
-    // if (argc >= 4) {
-    //     libraries_directory = argv[3];
-    // }
+     std::filesystem::path libraries_directory;
+     if (argc >= 4) {
+         libraries_directory = argv[3];
+     }
 
 	std::fstream file_stream(file_name);
 
@@ -56,12 +56,15 @@ int main(int argc, char *argv[])
 	tree->print(std::cout);
 
     Asampl::Interpreter::Program program;
-    program.set_handlers_directory(handlers_directory);
+    program.add_handlers_directory(file_name.parent_path());
+    program.add_libraries_directory(file_name.parent_path());
+
+    program.add_handlers_directory(handlers_directory);
     if (!libraries_directory.empty()) {
         program.add_libraries_directory(libraries_directory);
     }
-    program.load_stdlib();
-    program.execute(tree);
+    //program.load_stdlib();
+    program.execute(*tree);
 
 	//Tree::free(tree);
 	return 0;

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 
 enum class ast_node_type {
@@ -88,11 +89,16 @@ enum class ast_node_type {
 	MINUS,
 	MULT,
 	MDIV,
-	LESS,
-	MORE,
+	LEFT_SHIFT,
+	RIGHT_SHIFT,
 	BIN_AND,
 	BIN_OR,
-	BIN_NOR,
+    BIN_NOR,
+
+    _ASSIGNMENT_OPERATORS_END,
+
+	LESS,
+	MORE,
 	LOG_AND,
 	LOG_OR,
 	INCREM,
@@ -102,8 +108,6 @@ enum class ast_node_type {
 	LEFT_SHIFT_OPERATOR,
 	RIGHT_SHIFT_OPERATOR,
 
-	LEFT_SHIFT,
-	RIGHT_SHIFT,
 	QUESTION_MARK,
 	FILE_NAME,
 
@@ -159,7 +163,7 @@ public:
 		node(value)
 	{}
 
-	void print(std::ostream &file, const std::string &indent = "", bool root = true, int last = 1) {
+	void print(std::ostream &file, const std::string &indent = "", bool root = true, int last = 1) const {
 		if (root) file << "\n";
 		file << indent;
 		std::string new_indent = "";

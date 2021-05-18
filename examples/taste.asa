@@ -1,7 +1,7 @@
 PROGRAM PlayAndSaveVideo {
     Handlers {
-        ffmpeg from 'ffmpeg-handler';
-        string_stream from 'string-stream-handler';
+        ffmpeg from 'libffmpeg-handler';
+        string_stream from 'libstring-stream-handler';
     }
     Sources {
         video from 'data/test.ogv';

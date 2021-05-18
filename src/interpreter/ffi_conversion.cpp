@@ -11,8 +11,8 @@ AsaValueContainer convert_to_ffi(const ValuePtr& value) {
 
 ValuePtr convert_from_ffi(const AsaValueContainer& value) {
     switch (value.type) {
-        case ASA_DOUBLE: {
-            const double val = reinterpret_cast<const AsaDouble*>(value.data)->value;
+        case ASA_NUMBER: {
+            const double val = reinterpret_cast<const AsaNumber*>(value.data)->value;
             return Number{val};
         }
 
@@ -22,8 +22,8 @@ ValuePtr convert_from_ffi(const AsaValueContainer& value) {
             return String{string_value};
         }
 
-        case ASA_VIDEO_FRAME: {
-            auto video_frame = reinterpret_cast<AsaVideoFrame*>(value.data);
+        case ASA_IMAGE: {
+            auto video_frame = reinterpret_cast<AsaImage*>(value.data);
             std::vector<Byte> data;
             data.resize(video_frame->width * video_frame->height * 3u);
             std::copy(video_frame->data, video_frame->data + data.size(), data.data());
@@ -103,6 +103,10 @@ struct PythonVisitor : ValueVisitor<py::object> {
     }
 
     Result operator()(Function& x) override {
+        throw InterpreterException("Functions not implemented");
+    }
+
+    Result operator()(HandlerValue& x) override {
         throw InterpreterException("Functions not implemented");
     }
 };

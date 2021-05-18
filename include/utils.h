@@ -17,6 +17,12 @@ struct SliceOutOfRange : public std::range_error {
 template< typename T >
 class Slice {
 public:
+    Slice()
+        : ptr{nullptr}
+        , _size{0}
+    {
+    }
+
     Slice(T* ptr, size_t size)
         : ptr{ptr}
         , _size{size}
