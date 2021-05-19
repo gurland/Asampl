@@ -291,7 +291,7 @@ static as_tree *ebnf_ap_main_rule(parser *p, grammar_rule next, grammar_rule ap)
 	if (next_node) {
 		as_tree *ap_node = ap(p);
 		if (ap_node) {
-			ap_node->add_child(next_node);
+			ap_node->add_child(CHLDRN_FRONT(ap_node), next_node);
 			return ap_node;
 		}
 		return next_node;
@@ -309,7 +309,7 @@ static as_tree *ebnf_ap_recursive_rule(parser *p, const std::vector<token_type> 
 	as_tree *next_node = next(p);
 	as_tree *ap_node = ap(p);
 	if (ap_node) {
-		ap_node->add_child(next_node);
+		ap_node->add_child(CHLDRN_FRONT(ap_node), next_node);
 		node = ap_node;
 	}
 	else {

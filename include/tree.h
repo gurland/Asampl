@@ -153,6 +153,8 @@ using ast_children = std::vector<as_tree *>;
 #include "vt.h"
 extern std::string at_to_string(ast_nt type);
 
+#define CHLDRN_FRONT(ast) ((ast)->children.cbegin())
+#define CHLDRN_BACK(ast) ((ast)->children.cend())
 class as_tree {
 public:
 
