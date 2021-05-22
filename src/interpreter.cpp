@@ -188,7 +188,7 @@ ValuePtr Program::evaluate(const as_tree& tree, const std::shared_ptr<VarScope>&
         }
 
         case ast_node_type::ASSIGNMENT: {
-            assign(*children.at(1), *children.at(0), scope);
+            assign(*children.at(0), *children.at(1), scope);
             return Undefined{};
         }
 
@@ -231,19 +231,19 @@ ValuePtr Program::evaluate(const as_tree& tree, const std::shared_ptr<VarScope>&
         }
         case ast_node_type::MORE: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, <)};
+            return Bool{BINARY(Number, >)};
         }
         case ast_node_type::LESS: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, >)};
+            return Bool{BINARY(Number, <)};
         }
         case ast_node_type::MORE_EQUAL: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, <=)};
+            return Bool{BINARY(Number, >=)};
         }
         case ast_node_type::LESS_EQUAL: {
             BINARY_EXPR;
-            return Bool{BINARY(Number, >=)};
+            return Bool{BINARY(Number, <=)};
         }
         case ast_node_type::LOG_AND: {
             BINARY_EXPR;
@@ -280,6 +280,12 @@ ValuePtr Program::evaluate(const as_tree& tree, const std::shared_ptr<VarScope>&
 
         case ast_node_type::ID: {
             return evaluate_id(tree, scope);
+        }
+        
+        case ast_node_type::DOT: {
+            const auto value = evaluate(*children.at(0), scope);
+            const auto index = std::get<std::string>(children.at(1)->get_node()->value);
+            return value->get<Map>().get(index);
         }
 
         case ast_node_type::DOWNLOAD: {

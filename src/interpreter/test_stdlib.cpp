@@ -75,7 +75,6 @@ void show_image(Image& image) {
 
 void i_overlay(Image& background, Image& image, Map& pos_) {
     auto pos = to_pos(pos_);
-    std::cout << pos << std::endl;
     cv::Rect target_rect{pos.x, pos.y, static_cast<int>(image.width), static_cast<int>(image.height)};
 
     auto bg = as_mat(background);
@@ -138,6 +137,17 @@ Image i_solid_color(Map& color, Map& size)
     const auto cv_size = to_size(size);
     cv::Mat image(cv_size, CV_8UC3, to_color(color));
     return from_mat(image);
+}
+
+Image i_blur(Image& image, Number size_)
+{
+    int size = size_.as_int();
+    if (size % 2 == 0) {
+        size += 1;
+    }
+    cv::Mat dst;
+    cv::GaussianBlur(as_mat(image), dst, cv::Size(size, size), 0.0);
+    return from_mat(dst);
 }
 
 ValuePtr dbg(const ValuePtr& value) {
@@ -204,6 +214,11 @@ Tuple t_map(Tuple& in, Function& f) {
     }
 
     return result;
+}
+
+ValuePtr clone_value(const ValuePtr& value)
+{
+    return value->clone_ptr();
 }
 
 //std::vector<ValuePtr> array() {
@@ -281,12 +296,14 @@ std::vector<Function> get_stdlib_functions() {
         MAKE_ASAMPL_FUNCTION(load_image),
         MAKE_ASAMPL_FUNCTION(show_image),
         MAKE_ASAMPL_FUNCTION(i_overlay),
+        MAKE_ASAMPL_FUNCTION(i_blur),
         MAKE_ASAMPL_FUNCTION(scale_image),
         MAKE_ASAMPL_FUNCTION(i_solid_color),
         MAKE_ASAMPL_FUNCTION(i_width),
         MAKE_ASAMPL_FUNCTION(i_height),
         MAKE_ASAMPL_FUNCTION(t_map),
         MAKE_ASAMPL_FUNCTION(t_len),
+        make_asampl_function("clone", clone_value),
     };
 }
 

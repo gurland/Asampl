@@ -21,6 +21,7 @@ fn main() {
             }
         ]
     } |img, taste_value| {
+        img = i_blur(img, 40);
         let offset = 0;
         let i = 0;
         while (i < t_len(tastes)) {

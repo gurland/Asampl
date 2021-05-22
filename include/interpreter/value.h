@@ -20,6 +20,8 @@ class IHandler;
 }
 
 struct Undefined {
+    constexpr static const char* type_name = "Undefined";
+
     std::string to_string() const {
         return "UNDEFINED";
     }
@@ -103,6 +105,8 @@ namespace Asampl::Interpreter {
 using Byte = uint8_t;
 
 struct Number {
+    constexpr static const char* type_name = "Number";
+
     double value;
 
     Number(double value)
@@ -141,6 +145,8 @@ struct Number {
 };
 
 struct Bool {
+    constexpr static const char* type_name = "Bool";
+
     bool value;
 
     std::string to_string() const {
@@ -157,6 +163,8 @@ struct Bool {
 };
 
 struct String {
+    constexpr static const char* type_name = "String";
+
     std::string value;
 
     String(std::string value)
@@ -178,6 +186,8 @@ struct String {
 };
 
 struct Image {
+    constexpr static const char* type_name = "Image";
+
     size_t width;
     size_t height;
     std::vector<Byte> data;
@@ -198,6 +208,8 @@ struct Image {
 };
 
 struct Tuple {
+    constexpr static const char* type_name = "Tuple";
+
     std::vector<ValuePtr> values;
 
     std::string to_string() const;
@@ -236,6 +248,8 @@ struct Tuple {
 };
 
 struct Map {
+    constexpr static const char* type_name = "Map";
+
     std::unordered_map<std::string, ValuePtr> string_map;
 
     std::string to_string() const;
@@ -265,6 +279,8 @@ struct Map {
 };
 
 struct ByteArray {
+    constexpr static const char* type_name = "ByteArray";
+
     std::vector<Byte> data;
 
     std::string to_string() const;
@@ -279,6 +295,8 @@ struct ByteArray {
 };
 
 struct Function {
+    constexpr static const char* type_name = "Function";
+
     std::string name;
     std::function<ValuePtr(Utils::Slice<ValuePtr>)> func;
 
@@ -296,6 +314,8 @@ struct Function {
 };
 
 struct HandlerValue {
+    constexpr static const char* type_name = "Handler";
+
     std::string name;
     std::shared_ptr<Handler::IHandler> handler_ptr;
 
@@ -369,12 +389,30 @@ struct Value {
 
     template< typename T >
     constexpr T& get() {
-        return std::get<std::decay_t<T>>(variant);
+        if (is<T>()) {
+            return std::get<std::decay_t<T>>(variant);
+        } else {
+            const auto& expected = std::decay_t<T>::type_name;
+            const auto& got = std::visit([](const auto& val) {
+                return std::decay_t<decltype(val)>::type_name;
+            }, variant);
+
+            throw InterpreterException(std::string{"Wrong type. Expected "} + expected + ", got " + got);
+        }
     }
 
     template< typename T >
     constexpr const T& get() const {
-        return std::get<std::decay_t<T>>(variant);
+        if (is<T>()) {
+            return std::get<std::decay_t<T>>(variant);
+        } else {
+            const auto& expected = std::decay_t<T>::type_name;
+            const auto& got = std::visit([](const auto& val) {
+                return std::decay_t<decltype(val)>::type_name;
+            }, variant);
+
+            throw InterpreterException(std::string{"Wrong type. Expected "} + expected + ", got " + got);
+        }
     }
 
     template< typename T >

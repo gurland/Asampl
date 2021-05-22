@@ -1,5 +1,5 @@
-import handler ffmpeg from ffmpeg-handler
-import average from average.py
+import handler ffmpeg from "ffmpeg-handler"
+import average from "average.py"
 
 fn main() {
     let bar_width = 20;
@@ -21,7 +21,8 @@ fn main() {
 
         let channel = 0;
         while (channel < 3) {
-            let bar_height = average.color(img, channel) * i_height(img) / 255;
+            let avg = average.color;
+            let bar_height = avg(img, channel) * i_height(img) / 255;
             let bar = i_solid_color(bar_colors[channel], { "x": bar_width, "y": bar_height });
 
             i_overlay(img, bar, { "x": offset, "y": 0 });
