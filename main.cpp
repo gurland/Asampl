@@ -9,9 +9,11 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 
+#include <boost/dll.hpp>
+
 #include "lexer.h"
 #include "parser.h"
- #include "interpreter.h"
+#include "interpreter.h"
 
 int main(int argc, char *argv[])
 {
@@ -53,16 +55,20 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-    tree->print(std::cout);
-
     Asampl::Interpreter::Program program;
-    program.add_handlers_directory(file_name.parent_path());
-    program.add_libraries_directory(file_name.parent_path());
-
-    program.add_handlers_directory(handlers_directory);
+    if (!handlers_directory.empty()) {
+        program.add_handlers_directory(handlers_directory);
+    }
     if (!libraries_directory.empty()) {
         program.add_libraries_directory(libraries_directory);
     }
+
+    program.add_handlers_directory(file_name.parent_path());
+    program.add_libraries_directory(file_name.parent_path());
+
+    program.add_handlers_directory((boost::dll::program_location().parent_path() / "handlers").string());
+    program.add_libraries_directory((boost::dll::program_location().parent_path() / "lib").string());
+
     //program.load_stdlib();
     program.execute(*tree);
 
