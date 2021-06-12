@@ -1,19 +1,9 @@
-0 none
-1 sweet
-2 sweet sour
-3 sour
-4 none
-5 sweet sour
-6 sweet
-7 none
-8 sweet sour salty
-9 sweet sour salty bitter
-10 sweet sour salty bitter umami
-11 sweet sour bitter umami
-12 sweet bitter umami
-13 sweet umami
-14 sweet salty umami
-15 salty umami
-16 salty
-17 sweet
-19 none
+3.5 none
+5.5 bitter
+8 sweet
+14 sweet umami
+19 sweet umami salty
+22 bitter
+23 bitter sweet salty
+25 bitter sweet salty sour
+25 none
