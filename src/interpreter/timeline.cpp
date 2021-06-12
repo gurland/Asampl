@@ -31,23 +31,20 @@ Timeline::Timeline(Map& params, Function& callback)
     , callback{callback}
 
 {
-    if (params.has("from")) {
-        start = params.get("from")->get<Number>().value;
-    }
-    if (params.has("to")) {
-        end = params.get("to")->get<Number>().value;
-    }
-
     for (const auto& handler_params_ptr : params.strict_get("downloads")->get<Tuple>().values) {
         auto& handler_params = handler_params_ptr->get<Map>();
         const auto& handler = handler_params.strict_get("handler")->get<HandlerValue>().handler_ptr;
         const auto& source = handler_params.strict_get("source")->get<String>().value;
         active_downloads.emplace_back(std::make_unique<ActiveDownload>(source, *handler));
 
+        auto default_val = (handler_params.has("default")) ?
+            Handler::DownloadResponse::new_valid(handler_params.get("default"), 0) :
+            Handler::DownloadResponse::new_out_of_data();
+
         Handler::ActiveDownload* active_download = active_downloads.back().get();
         cur_frames.emplace_back(DOWNLOAD_FIRST_FRAME(active_download, start.value_or(0)));
         next_frames.emplace_back(active_download->download());
-        prev_frames.emplace_back(Handler::DownloadResponse::new_out_of_data());
+        prev_frames.emplace_back(default_val);
     }
 }
 
@@ -66,11 +63,8 @@ bool Timeline::iteration() {
         if (frame.is_valid() && frame.timestamp < cur_time)
             cur_time = frame.timestamp;
     }
-    
-    if (cur_time > end.value_or(std::numeric_limits<float>::max())) {
-        return false;
-    }
 
+    bool all_cur_are_valid = true;
     bool result = false;
     uint32_t ad_count = active_downloads.size();
     std::vector<ValuePtr> args;
@@ -92,9 +86,14 @@ bool Timeline::iteration() {
             result = true;
         }
 
+        if (value != nullptr) {
+            all_cur_are_valid = false;
+        }
         args.push_back(std::move(value));
     }
-    callback.func(args);
+
+    if (all_cur_are_valid)
+        callback.func(args);
 
     return result;
 }

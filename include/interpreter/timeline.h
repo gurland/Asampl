@@ -28,9 +28,6 @@ public:
 
     void run();
     bool iteration();
-
-    std::optional<double> start;
-    std::optional<double> end;
 private:
     Map& params;
     Function& callback;
