@@ -42,15 +42,12 @@ Timeline::Timeline(Map& params, Function& callback)
         auto& handler_params = handler_params_ptr->get<Map>();
         const auto& handler = handler_params.strict_get("handler")->get<HandlerValue>().handler_ptr;
         const auto& source = handler_params.strict_get("source")->get<String>().value;
-
         active_downloads.emplace_back(std::make_unique<ActiveDownload>(source, *handler));
 
-        Handler::ActiveDownload* dwnld = active_downloads.back().get();
-        DwnldData ddata{
-            .cur_frame = DOWNLOAD_FIRST_FRAME(dwnld, start.value_or(0)),
-            .next_frame = dwnld->download()
-        };
-        downloads_data.insert(std::make_pair(dwnld, std::move(ddata)));
+        Handler::ActiveDownload* active_download = active_downloads.back().get();
+        cur_frames.emplace_back(DOWNLOAD_FIRST_FRAME(active_download, start.value_or(0)));
+        next_frames.emplace_back(active_download->download());
+        prev_frames.emplace_back(Handler::DownloadResponse::new_out_of_data());
     }
 }
 
@@ -58,56 +55,46 @@ void Timeline::run() {
     while (iteration()) {}
 }
 
+#define def_related_to_index \
+    auto &cur_frame = cur_frames[i]; \
+    auto &next_frame = next_frames[i]; \
+    auto &prev_frame = prev_frames[i];
+
 bool Timeline::iteration() {
     cur_time = std::numeric_limits<float>::max();
-    for (auto &dwnld_data : downloads_data) {
-        auto &cur_frame = dwnld_data.second.cur_frame;
-        if (cur_frame.is_valid() && cur_frame.timestamp < cur_time) {
-            cur_time = cur_frame.timestamp;
-        }
+    for (auto &frame : cur_frames) {
+        if (frame.is_valid() && frame.timestamp < cur_time)
+            cur_time = frame.timestamp;
     }
     
     if (cur_time > end.value_or(std::numeric_limits<float>::max())) {
         return false;
     }
 
-    std::vector<ValuePtr> args;
-    args.reserve(downloads_data.size());
-
     bool result = false;
-    bool all_current_valid = true;
-    for (auto& [dwnld, dwnld_data] : downloads_data) {
-        auto &cur_frame = dwnld_data.cur_frame;
-        auto &next_frame = dwnld_data.next_frame;
+    uint32_t ad_count = active_downloads.size();
+    std::vector<ValuePtr> args;
+    args.reserve(ad_count);
 
-        ValuePtr value = Undefined{};
+    for (uint32_t i = 0; i < ad_count; i++) {
+        def_related_to_index;
+        ValuePtr value = prev_frame.value;
 
-        if (cur_frame.is_valid()) {
+        if (cur_frame.is_valid() && cur_frame.timestamp <= cur_time) {
             value = cur_frame.value;
-            if (cur_frame.timestamp <= cur_time) {
-                cur_frame = Handler::DownloadResponse::new_not_ready();
+            prev_frame = cur_frame;
+            cur_frame = next_frame;
+            if (next_frame.is_valid()) {
+                auto tmp_frame = active_downloads[i]->download();
+                next_frame = (tmp_frame.is_valid() && (!end || tmp_frame.timestamp <= end)) ?
+                    tmp_frame : DownloadResponse::new_not_ready();
             }
-        } else {
-            all_current_valid = false;
-        }
-        if (next_frame.is_valid() && (!cur_frame.is_valid() || next_frame.timestamp <= cur_time)) {
-            cur_frame = dwnld_data.next_frame;
-            auto tmp = dwnld->download();
-            if (tmp.is_valid() && (!end || tmp.timestamp <= end))
-                dwnld_data.next_frame = tmp;
-            else
-                dwnld_data.next_frame = DownloadResponse::new_not_ready();
-        }
-        if (cur_frame.is_valid() || next_frame.is_valid()) {
             result = true;
         }
 
         args.push_back(std::move(value));
     }
-
-    if (all_current_valid) {
-        callback.func(args);
-    }
+    callback.func(args);
 
     return result;
 }

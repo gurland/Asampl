@@ -3,11 +3,8 @@ import handler string_stream from "string-stream-handler"
 
 fn main() {
     let tastes = [ "sweet", "sour", "salty", "bitter", "umami" ];
-    dbg(tastes);
     let images = t_map(tastes, |name| { s_concat("data/", name, ".png"); });
-    dbg(images);
     images = t_map(images, load_image);
-    dbg(images);
 
     timeline {
         "downloads": [

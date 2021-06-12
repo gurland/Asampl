@@ -36,8 +36,9 @@ private:
     Function& callback;
 
     std::vector<std::unique_ptr<Handler::ActiveDownload>> active_downloads;
-    std::map<Handler::ActiveDownload*, DwnldData> downloads_data;
-
+    std::vector<Handler::DownloadResponse> cur_frames = {};
+    std::vector<Handler::DownloadResponse> prev_frames = {};
+    std::vector<Handler::DownloadResponse> next_frames = {};
 
     double cur_time = 0;
 };
