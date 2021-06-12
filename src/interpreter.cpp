@@ -70,11 +70,25 @@ void Program::execute(const as_tree& ast_tree) {
         global_scope->create(function.name) = std::move(function);
     }
 
+#ifdef ASAMPL_ENABLE_PYTHON
+    try {
+        for (const auto child : ast_tree.get_children()) {
+            evaluate(*child, global_scope);
+        }
+
+        global_scope->get("main")->get<Function>().func({});
+    } catch (const boost::python::error_already_set&) {
+        PyErr_Print();
+        throw InterpreterException("Python error");
+    }
+#else
     for (const auto child : ast_tree.get_children()) {
         evaluate(*child, global_scope);
     }
 
     global_scope->get("main")->get<Function>().func({});
+#endif
+
 }
 
 #define BINARY_EXPR \

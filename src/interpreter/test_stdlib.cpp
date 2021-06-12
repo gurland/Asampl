@@ -106,12 +106,28 @@ void i_overlay(Image& background, Image& image, Map& pos_) {
     img(source_rect).copyTo(bg(target_rect));
 }
 
+Image i_join_horizontal(Image& fst, Image& snd)
+{    
+    cv::Mat result;
+    cv::hconcat(as_mat(fst), as_mat(snd), result);
+    return from_mat(result);
+}
+
 Image load_image(const String& path)
 {
     auto bgr = cv::imread(path.value);
     cv::Mat rgb;
     cv::cvtColor(bgr, rgb, cv::COLOR_BGR2RGB);
     return from_mat(rgb);
+}
+
+void write_file(const String& path, Image& image)
+{
+    auto mat = as_mat(image);
+    cv::Mat bgr;
+    cv::cvtColor(mat, bgr, cv::COLOR_RGB2BGR);
+
+    cv::imwrite(path.value, bgr);
 }
 
 Image scale_image(Image& image, Map& size, ArgsRest rest) {
@@ -294,8 +310,11 @@ std::vector<Function> get_stdlib_functions() {
         MAKE_ASAMPL_FUNCTION(s_concat),
         MAKE_ASAMPL_FUNCTION(random_image),
         MAKE_ASAMPL_FUNCTION(load_image),
+        make_asampl_function("i_read_file", load_image),
+        MAKE_ASAMPL_FUNCTION(write_file),
         MAKE_ASAMPL_FUNCTION(show_image),
         MAKE_ASAMPL_FUNCTION(i_overlay),
+        MAKE_ASAMPL_FUNCTION(i_join_horizontal),
         MAKE_ASAMPL_FUNCTION(i_blur),
         MAKE_ASAMPL_FUNCTION(scale_image),
         MAKE_ASAMPL_FUNCTION(i_solid_color),

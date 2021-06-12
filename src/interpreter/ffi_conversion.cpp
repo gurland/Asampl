@@ -131,7 +131,7 @@ ValuePtr convert_from_python(py::object value) {
             std::vector<Byte> data;
             data.resize(sizes[0] * sizes[1] * 3);
             std::copy(array.get_data(), array.get_data() + data.size(), data.data());
-            return Image{ sizes[0], sizes[1], std::move(data) };
+            return Image{ sizes[1], sizes[0], std::move(data) };
         } else if (array.get_nd() == 1) {
             size_t size = array.shape(0);
 
