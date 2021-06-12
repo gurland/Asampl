@@ -10,7 +10,7 @@ fn main() {
         "downloads": [
             {
                 "handler": ffmpeg,
-                "source": "data/test.ogv"
+                "source": "data/food.ogv"
             },
             {
                 "handler": string_stream,
@@ -18,7 +18,6 @@ fn main() {
             }
         ]
     } |img, taste_value| {
-        img = i_blur(img, 40);
         let offset = 0;
         let i = 0;
         while (i < t_len(tastes)) {
