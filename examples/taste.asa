@@ -14,7 +14,8 @@ fn main() {
             },
             {
                 "handler": string_stream,
-                "source": "data/taste.txt"
+                "source": "data/taste.txt",
+                "default": "none"
             }
         ]
     } |img, taste_value| {

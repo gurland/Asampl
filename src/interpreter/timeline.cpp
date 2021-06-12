@@ -42,7 +42,7 @@ Timeline::Timeline(Map& params, Function& callback)
             Handler::DownloadResponse::new_out_of_data();
 
         Handler::ActiveDownload* active_download = active_downloads.back().get();
-        cur_frames.emplace_back(DOWNLOAD_FIRST_FRAME(active_download, start.value_or(0)));
+        cur_frames.emplace_back(DOWNLOAD_FIRST_FRAME(active_download, 0));
         next_frames.emplace_back(active_download->download());
         prev_frames.emplace_back(default_val);
     }
@@ -80,13 +80,13 @@ bool Timeline::iteration() {
             cur_frame = next_frame;
             if (next_frame.is_valid()) {
                 auto tmp_frame = active_downloads[i]->download();
-                next_frame = (tmp_frame.is_valid() && (!end || tmp_frame.timestamp <= end)) ?
+                next_frame = (tmp_frame.is_valid()) ?
                     tmp_frame : DownloadResponse::new_not_ready();
             }
             result = true;
         }
 
-        if (value != nullptr) {
+        if (value == nullptr) {
             all_cur_are_valid = false;
         }
         args.push_back(std::move(value));
