@@ -3,4 +3,4 @@
 	url = https://github.com/maddouri/dynalo
 [submodule "deps/asampl-ffi"]
 	path = deps/asampl-ffi
-	url = git@github.com:Asampl-development-team/asampl-ffi.git
+	url = https://github.com/Asampl-development-team/asampl-ffi.git
